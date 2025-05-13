@@ -7,7 +7,7 @@
 - Hardware Architecture - block diagram of the system, Top-level flow chart of software implementation (mote and PC)
 
 ## DIKW Pyramid Abstraction
-- Provide a scenario in which your system can operate. Consider what DIKW Pyramid layers that your system can contribute to
+![alt text](/Users/emilynilsen/csse4011-thrasos-pistachio/images/dikw.png)
 
 ## Sensor Integration
 - What sensors are used? What type of data is required? How are the sensors integrated?
