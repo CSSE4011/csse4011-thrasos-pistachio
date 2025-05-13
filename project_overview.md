@@ -7,7 +7,7 @@
 - Hardware Architecture - block diagram of the system, Top-level flow chart of software implementation (mote and PC)
 
 ## DIKW Pyramid Abstraction
-![alt text](/Users/emilynilsen/csse4011-thrasos-pistachio/images/dikw.png)
+![alt text](https://github.com/CSSE4011/csse4011-thrasos-pistachio/blob/main/images/dikw.png)
 
 ## Sensor Integration
 - What sensors are used? What type of data is required? How are the sensors integrated?
