@@ -3,11 +3,14 @@
 ## Project Description
 - Project and Scenario Description (e.g. what is the project)
 
-## System Overview (Block Diagram)
-- Hardware Architecture - block diagram of the system, Top-level flow chart of software implementation (mote and PC)
+## System Overview
+### Hardware Architecture Block Diagram
+<!--![alt text](https://github.com/CSSE4011/csse4011-thrasos-pistachio/blob/main/images/dikw.png)-->
+
+### Top-level flow chart of software implementation (mote and PC)
 
 ## DIKW Pyramid Abstraction
-![alt text](https://github.com/CSSE4011/csse4011-thrasos-pistachio/blob/main/images/dikw.png)
+https://drive.google.com/file/d/1Z1VP8TxYqcsBhaCWSjrRivZCterFqkT1/view?usp=sharing
 
 ## Sensor Integration
 - What sensors are used? What type of data is required? How are the sensors integrated?
