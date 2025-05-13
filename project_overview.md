@@ -5,12 +5,12 @@
 
 ## System Overview
 ### Hardware Architecture Block Diagram
-<!--![alt text](https://github.com/CSSE4011/csse4011-thrasos-pistachio/blob/main/images/dikw.png)-->
+![alt text](https://github.com/CSSE4011/csse4011-thrasos-pistachio/blob/main/images/block.png)
 
 ### Top-level flow chart of software implementation (mote and PC)
 
 ## DIKW Pyramid Abstraction
-https://drive.google.com/file/d/1Z1VP8TxYqcsBhaCWSjrRivZCterFqkT1/view?usp=sharing
+![alt text](https://github.com/CSSE4011/csse4011-thrasos-pistachio/blob/main/images/dikw.png)
 
 ## Sensor Integration
 * **USB Camera:**
