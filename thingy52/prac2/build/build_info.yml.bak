@@ -1,0 +1,59 @@
+cmake:
+  application:
+    configuration-dir: /Users/wendi/csse4011/repo/prac2
+    source-dir: /Users/wendi/csse4011/repo/prac2
+  board:
+    name: thingy52
+    path:
+     - /Users/wendi/csse4011/repo/zephyr/boards/nordic/thingy52
+    qualifiers: nrf52832
+    revision: 
+  devicetree:
+    bindings-dirs:
+     - /Users/wendi/csse4011/repo/zephyr/dts/bindings
+    files:
+     - /Users/wendi/csse4011/repo/zephyr/boards/nordic/thingy52/thingy52_nrf52832.dts
+     - /Users/wendi/csse4011/repo/prac2/boards/thingy52_nrf52832.overlay
+    include-dirs:
+     - /Users/wendi/csse4011/repo/modules/hal/atmel/include
+     - /Users/wendi/csse4011/repo/modules/hal/gigadevice/include
+     - /Users/wendi/csse4011/repo/modules/hal/microchip/include
+     - /Users/wendi/csse4011/repo/modules/hal/microchip/dts
+     - /Users/wendi/csse4011/repo/modules/hal/nuvoton/dts
+     - /Users/wendi/csse4011/repo/modules/hal/nxp/dts
+     - /Users/wendi/csse4011/repo/modules/hal/stm32/dts
+     - /Users/wendi/csse4011/repo/zephyr/include
+     - /Users/wendi/csse4011/repo/zephyr/include/zephyr
+     - /Users/wendi/csse4011/repo/zephyr/dts/common
+     - /Users/wendi/csse4011/repo/zephyr/dts/x86
+     - /Users/wendi/csse4011/repo/zephyr/dts/xtensa
+     - /Users/wendi/csse4011/repo/zephyr/dts/sparc
+     - /Users/wendi/csse4011/repo/zephyr/dts/riscv
+     - /Users/wendi/csse4011/repo/zephyr/dts/posix
+     - /Users/wendi/csse4011/repo/zephyr/dts/nios2
+     - /Users/wendi/csse4011/repo/zephyr/dts/arm64
+     - /Users/wendi/csse4011/repo/zephyr/dts/arm
+     - /Users/wendi/csse4011/repo/zephyr/dts/arc
+     - /Users/wendi/csse4011/repo/zephyr/dts
+    user-files:
+     - /Users/wendi/csse4011/repo/prac2/boards/thingy52_nrf52832.overlay
+  kconfig:
+    files:
+     - /Users/wendi/csse4011/repo/zephyr/boards/nordic/thingy52/thingy52_nrf52832_defconfig
+     - /Users/wendi/csse4011/repo/prac2/prj.conf
+    user-files:
+     - /Users/wendi/csse4011/repo/prac2/prj.conf
+  toolchain:
+    name: zephyr
+    path: /Users/wendi/zephyr_install/zephyr-sdk-0.17.0
+  vendor-specific:
+    nordic:
+      svdfile: /Users/wendi/csse4011/repo/modules/hal/nordic/nrfx/mdk/nrf52.svd
+  zephyr:
+    version: 4.1.0-rc2
+    zephyr-base: /Users/wendi/csse4011/repo/zephyr
+version: 0.1.0
+west:
+  command: /Users/wendi/zephyr_install/env/bin/west build -b thingy52/nrf52832 --pristine
+  topdir: /Users/wendi/csse4011/repo
+  version: 1.3.0

@@ -1,0 +1,2 @@
+# Load Zephyr board defconfig descriptions.
+osource "/Users/wendi/csse4011/repo/zephyr/boards/nordic/thingy52/Kconfig.defconfig"

@@ -1,0 +1,11 @@
+sample:
+  name: Prac 1
+tests:
+  sample.basic.prac1:
+    tags:
+      - gpio
+      - rng
+    depends_on: gpio
+    harness: gpio
+    integration_platforms:
+      - frdm_k64f

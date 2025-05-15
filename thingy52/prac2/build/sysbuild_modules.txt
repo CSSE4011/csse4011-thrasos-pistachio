@@ -1,0 +1,1 @@
+"mcuboot":"/Users/wendi/csse4011/repo/bootloader/mcuboot":"/Users/wendi/csse4011/repo/bootloader/mcuboot/boot/zephyr/sysbuild"
