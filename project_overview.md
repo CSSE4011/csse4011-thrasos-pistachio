@@ -51,7 +51,7 @@ A smart waste bin system designed to encourage correct waste sorting and track w
     * **Interface:** Digital I/O pins (trigger and echo) with the microcontroller.
     * **Implementation:** Timers will measure the echo pulse duration to determine distance.
 
-* **VOC Sensor (likely integrated into a Temperature, Humidity, and Pressure sensor module):**
+* **VOC Sensor:**
     * **Function:** Detect Volatile Organic Compounds, indicative of organic waste.
     * **Data Required:** VOC concentration reading.
     * **Interface:** GPIO pins with the microcontroller.
