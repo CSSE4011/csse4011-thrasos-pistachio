@@ -57,19 +57,19 @@ A smart waste bin system designed to encourage correct waste sorting and track w
     * **Interface:** GPIO pins with the microcontroller.
     * **Implementation:** Specific libraries for the sensor module will be used to read VOC data. <zephyr/drivers/sensor/ccs811.h>
 
-- What sensors are used? What type of data is required? How are the sensors integrated?
-
 ## Wireless Network Communication or IoT protocols/Web dashboards 
 - MQTT protocol via Wifi, local access point setup, through TBD broker to TAGIO unless decision made to include camera feed. Uses proposed message protocol in any communication instance
+![alt text](https://github.com/CSSE4011/csse4011-thrasos-pistachio/blob/main/images/network_stack.png)
+![alt text](https://github.com/CSSE4011/csse4011-thrasos-pistachio/blob/main/images/message_protocol.png)
 
 ## Deliverables and Key Performance Indicators
 1.  **Waste Classification Accuracy:**
     * **Target:** Achieve a minimum accuracy of 80% in correctly classifying at least 3 different common waste types (e.g. recycling, general, organic) based on image and potentially VOC data.
-    * **Measurement:** \[\frac{\text{Number of correctly classified items}}{\text{Total number of items tested}} \times 100\%\]
+    * **Measurement:** Number of correctly classified items/Total number of items tested
 
 2.  **Fill Level Measurement Accuracy:**
     * **Target:** Obtain a fill level measurement accuracy within +/- 10% of the actual fill level of the bin, across at least 80% of the bin's capacity range.
-    * **Measurement:** \[\left(1 - \frac{|\text{Sensor Reading} - \text{Actual Level}|}{\text{Total Bin Height}}\right) \times 100\%\]
+    * **Measurement:** 1 - (Sensor Reading - Actual Level) / Total Bin Height
 
 3.  **Real-time Response Time:**
     * **Target:** The time taken from showing the object to eliciting a response on the servo motor and M5 Core2 display should be less than 1 second for at least 90% of waste disposal. 
@@ -77,13 +77,11 @@ A smart waste bin system designed to encourage correct waste sorting and track w
 
 4.  **Web Dashboard Reliability:**
     * **Target:** Successfully log at least 95% of all waste disposal events (including classification, fill level and timestamp) to the web dashboard.
-    * **Measurement:** \[\frac{\text{Number of events logged}}{\text{Total number of disposal events}} \times 100\%\]
+    * **Measurement:** Number of events logged/Total number of disposal events
 
 5.  **Organic Material Identification Accuracy (VOC Sensor):**
     * **Target:** Achieve a minimum accuracy of 80% in correctly identifying the presence of organic material within the waste deposited, based on the VOC sensor readings.
-    * **Measurement:** \[\frac{\text{Number of correctly identified organic/non-organic items (based on VOC)}}{\text{Total number of organic and non-organic items tested}} \times 100\%\]
-
-- at least 5 Deliverables and Key Performance Indicators - how is the ’success’ of the project measured?
+    * **Measurement:** Number of correctly identified organic/non-organic items (based on VOC)/Total number of organic and non-organic items tested
 
 ## Algorithms Schemes (not assessed in Milestone)
 - e.g. Machine learning approaches
