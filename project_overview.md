@@ -1,7 +1,32 @@
 # Project Overview
 
 ## Project Description
-- Project and Scenario Description (e.g. what is the project)
+## Smart Waste Management System
+
+A smart waste bin system designed to encourage correct waste sorting and track waste generation using embedded sensors and real-time feedback.
+
+**Smart Bin Components:**
+
+* **Camera:** Captures images of discarded items for waste type classification (e.g., general, recycling, organic).
+* **Ultrasonic Sensor:** Measures the fill level of the bin.
+* **VoC Sensor:** Detects volatile organic compounds to aid in identifying organic material.
+* **M5 Core:** Provides a real-time visual display for user feedback.
+* **Servo Motor:** Guides waste into the correct compartment.
+
+**Waste Detection and Processing:**
+
+1.  **Waste Detected:** When an item is presented to the bin, the sensors are triggered.
+2.  **Image Analysis:** The camera captures an image of the waste, which is then analyzed to classify the waste type (e.g., paper, plastic, organic).
+3.  **Fill Level Recording:** The ultrasonic sensor measures and records the current fill level of the bin.
+4.  **Real-time Visual Feedback:** The M5 Core displays visual information to the user, indicating the correct bin compartment for the identified waste type.
+5.  **Servo Motor Guidance:** Based on the waste classification, the servo motor moves to guide the waste into the appropriate bin compartment.
+6.  **Data Transmission:** The identified waste type and the bin's fill level are transmitted wirelessly to a web dashboard.
+
+**Web Dashboard Features:**
+
+* **Waste History:** Displays a chronological record of discarded waste, including the identified waste type and the timestamp of disposal.
+* **Current Fill Level:** Shows the real-time fill level of the smart bin.
+* **Sorting Accuracy Statistics:** Provides data and visualizations on the user's waste sorting over time. 
 
 ## System Overview
 ### Hardware Architecture Block Diagram
