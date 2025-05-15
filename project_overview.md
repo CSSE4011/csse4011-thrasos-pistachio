@@ -35,7 +35,7 @@
 - What sensors are used? What type of data is required? How are the sensors integrated?
 
 ## Wireless Network Communication or IoT protocols/Web dashboards 
-- What is the network topology or IoT protocols used? What protocols are used and how? What sort of data rate is required? You must also include a message protocol diagram.
+- MQTT protocol via Wifi, local access point setup, through TBD broker to TAGIO unless decision made to include camera feed. Uses proposed message protocol in any communication instance
 
 ## Deliverables and Key Performance Indicators
 1.  **Waste Classification Accuracy:**
