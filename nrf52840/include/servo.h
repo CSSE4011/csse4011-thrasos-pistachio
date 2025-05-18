@@ -1,2 +1,2 @@
 void test(void);
-void initialise_pins(void);
+void initialise_pwm(void);

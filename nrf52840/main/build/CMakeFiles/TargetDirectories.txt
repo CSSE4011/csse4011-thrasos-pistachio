@@ -187,6 +187,9 @@
 /Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/pinctrl/CMakeFiles/rebuild_cache.dir
 /Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/pinctrl/renesas/CMakeFiles/edit_cache.dir
 /Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/pinctrl/renesas/CMakeFiles/rebuild_cache.dir
+/Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/pwm/CMakeFiles/drivers__pwm.dir
+/Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/pwm/CMakeFiles/edit_cache.dir
+/Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/pwm/CMakeFiles/rebuild_cache.dir
 /Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/serial/CMakeFiles/drivers__serial.dir
 /Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/serial/CMakeFiles/edit_cache.dir
 /Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/serial/CMakeFiles/rebuild_cache.dir

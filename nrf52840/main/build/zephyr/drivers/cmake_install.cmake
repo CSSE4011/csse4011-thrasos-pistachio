@@ -94,6 +94,11 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
+  include("/Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/pwm/cmake_install.cmake")
+endif()
+
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
   include("/Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/serial/cmake_install.cmake")
 endif()
 

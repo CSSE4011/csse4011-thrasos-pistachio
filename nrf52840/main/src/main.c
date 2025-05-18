@@ -6,6 +6,6 @@
 #include <zephyr/device.h>
 
 int main(void) {
-    initialise_pins();
+    initialise_pwm();
     test();
 }
