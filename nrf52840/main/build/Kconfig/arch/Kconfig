@@ -1,0 +1,12 @@
+# Load Zephyr Arch Kconfig descriptions.
+osource "/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/arch/rx/Kconfig"
+osource "/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/arch/x86/Kconfig"
+osource "/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/arch/xtensa/Kconfig"
+osource "/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/arch/sparc/Kconfig"
+osource "/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/arch/riscv/Kconfig"
+osource "/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/arch/posix/Kconfig"
+osource "/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/arch/nios2/Kconfig"
+osource "/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/arch/mips/Kconfig"
+osource "/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/arch/arm64/Kconfig"
+osource "/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/arch/arm/Kconfig"
+osource "/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/arch/arc/Kconfig"

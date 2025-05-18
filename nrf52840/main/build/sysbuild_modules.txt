@@ -1,0 +1,1 @@
+"mcuboot":"/Users/emilynilsen/csse4011-thrasos-pistachio/bootloader/mcuboot":"/Users/emilynilsen/csse4011-thrasos-pistachio/bootloader/mcuboot/boot/zephyr/sysbuild"

@@ -1,0 +1,32 @@
+empty_file.o: \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/misc/empty_file.c \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/boards/nordic/nrf52840dk/nrf52840dk_nrf52840.dts \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/dts/arm/nordic/nrf52840_qiaa.dtsi \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/dts/common/mem.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/dts/arm/nordic/nrf52840.dtsi \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/dts/arm/armv7-m.dtsi \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/dts/common/skeleton.dtsi \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/dts/vendor/nordic/nrf_common.dtsi \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/dt-bindings/adc/adc.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/dt-bindings/dt-util.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/sys/util_macro.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/sys/util_internal.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/sys/util_loops.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/sys/util_listify.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/sys/util_internal_is_eq.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/sys/util_internal_util_inc.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/sys/util_internal_util_dec.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/sys/util_internal_util_x2.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/dt-bindings/gpio/gpio.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/dt-bindings/i2c/i2c.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/dt-bindings/input/input-event-codes.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/dt-bindings/pinctrl/nrf-pinctrl.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/dt-bindings/pwm/pwm.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/dts/common/freq.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/dts/arm/nordic/override.dtsi \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/dt-bindings/adc/nrf-saadc-v3.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/dt-bindings/adc/nrf-saadc-v2.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/dt-bindings/adc/nrf-saadc.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/include/zephyr/dt-bindings/regulator/nrf5x.h \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/dts/vendor/nordic/nrf52840_partition.dtsi \
+ /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/boards/nordic/nrf52840dk/nrf52840dk_nrf52840-pinctrl.dtsi
