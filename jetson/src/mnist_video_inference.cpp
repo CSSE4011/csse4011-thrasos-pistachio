@@ -235,7 +235,7 @@ public:
         return (union_area > 0) ? intersection_area / union_area : 0.0f;
     }
 
-    std::vector<float> MNISTInference::parseYOLOOutput(const std::vector<float>& rawOutput, int modelWidth, int modelHeight, int frameWidth, int frameHeight) {
+    std::vector<float> parseYOLOOutput(const std::vector<float>& rawOutput, int modelWidth, int modelHeight, int frameWidth, int frameHeight) {
         std::vector<float> detections;
         float confidenceThreshold = 0.5f; // Adjust as needed
         float nmsThreshold = 0.5f;        // Adjust as needed
@@ -602,6 +602,7 @@ int main(int argc, char** argv)
                 cv::putText(frame, text, textOrg, cv::FONT_HERSHEY_SIMPLEX, 0.7, color, 2);
             }
             
+            char str[100];
             // Display FPS
             sprintf(str, "FPS: %.1f", inference.GetNetworkFPS());
             cv::putText(frame, str, cv::Point(10, 60), 
