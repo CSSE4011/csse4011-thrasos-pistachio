@@ -10,6 +10,7 @@
     ],
     "__subsystem": [
         "gpio_driver_api",
+        "led_driver_api",
         "pwm_driver_api",
         "shared_irq_driver_api",
         "crypto_driver_api",
@@ -47,7 +48,7 @@
         "i2s_driver_api",
         "i3c_driver_api",
         "ipm_driver_api",
-        "led_driver_api",
+        "kscan_driver_api",
         "led_strip_driver_api",
         "lora_driver_api",
         "mbox_driver_api",

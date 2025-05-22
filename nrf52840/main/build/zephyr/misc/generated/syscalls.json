@@ -201,6 +201,70 @@
     ],
     [
         [
+            "int led_blink",
+            "const struct device *dev, uint32_t led,\n\t\t\t    uint32_t delay_on, uint32_t delay_off"
+        ],
+        "led.h",
+        true
+    ],
+    [
+        [
+            "int led_get_info",
+            "const struct device *dev, uint32_t led,\n\t\t\t   const struct led_info **info"
+        ],
+        "led.h",
+        true
+    ],
+    [
+        [
+            "int led_set_brightness",
+            "const struct device *dev, uint32_t led,\n\t\t\t\t     uint8_t value"
+        ],
+        "led.h",
+        true
+    ],
+    [
+        [
+            "int led_write_channels",
+            "const struct device *dev,\n\t\t\t\t uint32_t start_channel,\n\t\t\t\t uint32_t num_channels, const uint8_t *buf"
+        ],
+        "led.h",
+        true
+    ],
+    [
+        [
+            "int led_set_channel",
+            "const struct device *dev,\n\t\t\t      uint32_t channel, uint8_t value"
+        ],
+        "led.h",
+        true
+    ],
+    [
+        [
+            "int led_set_color",
+            "const struct device *dev, uint32_t led,\n\t\t\t    uint8_t num_colors, const uint8_t *color"
+        ],
+        "led.h",
+        true
+    ],
+    [
+        [
+            "int led_on",
+            "const struct device *dev, uint32_t led"
+        ],
+        "led.h",
+        true
+    ],
+    [
+        [
+            "int led_off",
+            "const struct device *dev, uint32_t led"
+        ],
+        "led.h",
+        true
+    ],
+    [
+        [
             "int pwm_set_cycles",
             "const struct device *dev, uint32_t channel,\n\t\t\t     uint32_t period, uint32_t pulse,\n\t\t\t     pwm_flags_t flags"
         ],
@@ -450,14 +514,6 @@
     [
         [
             "int device_init",
-            "const struct device *dev"
-        ],
-        "device.h",
-        true
-    ],
-    [
-        [
-            "int device_deinit",
             "const struct device *dev"
         ],
         "device.h",
@@ -1265,7 +1321,7 @@
     ],
     [
         [
-            "unsigned int sys_clock_hw_cycles_per_sec_runtime_get",
+            "int sys_clock_hw_cycles_per_sec_runtime_get",
             "void"
         ],
         "time_units.h",
@@ -1923,14 +1979,6 @@
         [
             "int counter_get_value_64",
             "const struct device *dev, uint64_t *ticks"
-        ],
-        "counter.h",
-        false
-    ],
-    [
-        [
-            "int counter_reset",
-            "const struct device *dev"
         ],
         "counter.h",
         false
@@ -2737,66 +2785,26 @@
     ],
     [
         [
-            "int led_blink",
-            "const struct device *dev, uint32_t led,\n\t\t\t    uint32_t delay_on, uint32_t delay_off"
+            "int kscan_config",
+            "const struct device *dev,\n\t\t\t     kscan_callback_t callback"
         ],
-        "led.h",
+        "kscan.h",
         false
     ],
     [
         [
-            "int led_get_info",
-            "const struct device *dev, uint32_t led,\n\t\t\t   const struct led_info **info"
+            "int kscan_enable_callback",
+            "const struct device *dev"
         ],
-        "led.h",
+        "kscan.h",
         false
     ],
     [
         [
-            "int led_set_brightness",
-            "const struct device *dev, uint32_t led,\n\t\t\t\t     uint8_t value"
+            "int kscan_disable_callback",
+            "const struct device *dev"
         ],
-        "led.h",
-        false
-    ],
-    [
-        [
-            "int led_write_channels",
-            "const struct device *dev,\n\t\t\t\t uint32_t start_channel,\n\t\t\t\t uint32_t num_channels, const uint8_t *buf"
-        ],
-        "led.h",
-        false
-    ],
-    [
-        [
-            "int led_set_channel",
-            "const struct device *dev,\n\t\t\t      uint32_t channel, uint8_t value"
-        ],
-        "led.h",
-        false
-    ],
-    [
-        [
-            "int led_set_color",
-            "const struct device *dev, uint32_t led,\n\t\t\t    uint8_t num_colors, const uint8_t *color"
-        ],
-        "led.h",
-        false
-    ],
-    [
-        [
-            "int led_on",
-            "const struct device *dev, uint32_t led"
-        ],
-        "led.h",
-        false
-    ],
-    [
-        [
-            "int led_off",
-            "const struct device *dev, uint32_t led"
-        ],
-        "led.h",
+        "kscan.h",
         false
     ],
     [
@@ -3426,15 +3434,7 @@
     [
         [
             "int stepper_enable",
-            "const struct device *dev"
-        ],
-        "stepper.h",
-        false
-    ],
-    [
-        [
-            "int stepper_disable",
-            "const struct device *dev"
+            "const struct device *dev, const bool enable"
         ],
         "stepper.h",
         false
@@ -3507,14 +3507,6 @@
         [
             "int stepper_run",
             "const struct device *dev, enum stepper_direction direction"
-        ],
-        "stepper.h",
-        false
-    ],
-    [
-        [
-            "int stepper_stop",
-            "const struct device *dev"
         ],
         "stepper.h",
         false
@@ -4450,14 +4442,6 @@
     [
         [
             "int rtio_sqe_cancel",
-            "struct rtio_sqe *sqe"
-        ],
-        "rtio.h",
-        false
-    ],
-    [
-        [
-            "void rtio_sqe_signal",
             "struct rtio_sqe *sqe"
         ],
         "rtio.h",

@@ -1,4 +1,4 @@
-# Install script for directory: /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/drivers/usb_c
+# Install script for directory: /Users/wendi/csse4011/repo/zephyr/drivers/usb_c
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -34,12 +34,12 @@ endif()
 
 # Set path to fallback-tool for dependency-resolution.
 if(NOT DEFINED CMAKE_OBJDUMP)
-  set(CMAKE_OBJDUMP "/Users/emilynilsen/zephyr_install/zephyr-sdk-0.17.0/arm-zephyr-eabi/bin/arm-zephyr-eabi-objdump")
+  set(CMAKE_OBJDUMP "/Users/wendi/zephyr_install/zephyr-sdk-0.17.0/arm-zephyr-eabi/bin/arm-zephyr-eabi-objdump")
 endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
 if(CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "/Users/emilynilsen/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/usb_c/install_local_manifest.txt"
+  file(WRITE "/Users/wendi/csse4011/repo/csse4011-thrasos-pistachio/nrf52840/main/build/zephyr/drivers/usb_c/install_local_manifest.txt"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()

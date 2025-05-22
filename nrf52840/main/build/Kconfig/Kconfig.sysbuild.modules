@@ -25,9 +25,6 @@ config ZEPHYR_HAL_AMBIQ_MODULE
 config ZEPHYR_ATMEL_MODULE
    bool
    default y
-config ZEPHYR_HAL_BOUFFALOLAB_MODULE
-   bool
-   default y
 config ZEPHYR_HAL_ESPRESSIF_MODULE
    bool
    default y
