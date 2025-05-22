@@ -7,7 +7,6 @@
  */
 
 /* Symbol declarations */
-extern void * const z_impl_device_deinit;
 extern void * const z_impl_device_get_binding;
 extern void * const z_impl_device_get_by_dt_nodelabel;
 extern void * const z_impl_device_init;
@@ -121,11 +120,24 @@ extern void * const z_impl_k_uptime_ticks;
 extern void * const z_impl_k_usleep;
 extern void * const z_impl_k_wakeup;
 extern void * const z_impl_k_yield;
+extern void * const z_impl_led_blink;
+extern void * const z_impl_led_get_info;
+extern void * const z_impl_led_off;
+extern void * const z_impl_led_on;
+extern void * const z_impl_led_set_brightness;
+extern void * const z_impl_led_set_channel;
+extern void * const z_impl_led_set_color;
+extern void * const z_impl_led_write_channels;
 extern void * const z_impl_log_buffered_cnt;
 extern void * const z_impl_log_filter_set;
 extern void * const z_impl_log_frontend_filter_set;
 extern void * const z_impl_log_panic;
 extern void * const z_impl_log_process;
+extern void * const z_impl_pwm_capture_cycles;
+extern void * const z_impl_pwm_disable_capture;
+extern void * const z_impl_pwm_enable_capture;
+extern void * const z_impl_pwm_get_cycles_per_sec;
+extern void * const z_impl_pwm_set_cycles;
 extern void * const z_impl_sys_clock_hw_cycles_per_sec_runtime_get;
 extern void * const z_impl_uart_config_get;
 extern void * const z_impl_uart_configure;
@@ -163,7 +175,6 @@ extern void * const z_impl_zephyr_read_stdin;
 extern void * const z_impl_zephyr_write_stdout;
 
 /* Exported symbols */
-EXPORT_SYMBOL(z_impl_device_deinit);
 EXPORT_SYMBOL(z_impl_device_get_binding);
 EXPORT_SYMBOL(z_impl_device_get_by_dt_nodelabel);
 EXPORT_SYMBOL(z_impl_device_init);
@@ -277,11 +288,24 @@ EXPORT_SYMBOL(z_impl_k_uptime_ticks);
 EXPORT_SYMBOL(z_impl_k_usleep);
 EXPORT_SYMBOL(z_impl_k_wakeup);
 EXPORT_SYMBOL(z_impl_k_yield);
+EXPORT_SYMBOL(z_impl_led_blink);
+EXPORT_SYMBOL(z_impl_led_get_info);
+EXPORT_SYMBOL(z_impl_led_off);
+EXPORT_SYMBOL(z_impl_led_on);
+EXPORT_SYMBOL(z_impl_led_set_brightness);
+EXPORT_SYMBOL(z_impl_led_set_channel);
+EXPORT_SYMBOL(z_impl_led_set_color);
+EXPORT_SYMBOL(z_impl_led_write_channels);
 EXPORT_SYMBOL(z_impl_log_buffered_cnt);
 EXPORT_SYMBOL(z_impl_log_filter_set);
 EXPORT_SYMBOL(z_impl_log_frontend_filter_set);
 EXPORT_SYMBOL(z_impl_log_panic);
 EXPORT_SYMBOL(z_impl_log_process);
+EXPORT_SYMBOL(z_impl_pwm_capture_cycles);
+EXPORT_SYMBOL(z_impl_pwm_disable_capture);
+EXPORT_SYMBOL(z_impl_pwm_enable_capture);
+EXPORT_SYMBOL(z_impl_pwm_get_cycles_per_sec);
+EXPORT_SYMBOL(z_impl_pwm_set_cycles);
 EXPORT_SYMBOL(z_impl_sys_clock_hw_cycles_per_sec_runtime_get);
 EXPORT_SYMBOL(z_impl_uart_config_get);
 EXPORT_SYMBOL(z_impl_uart_configure);

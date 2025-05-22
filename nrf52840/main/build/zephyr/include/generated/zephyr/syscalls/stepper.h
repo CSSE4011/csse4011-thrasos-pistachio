@@ -20,48 +20,26 @@
 extern "C" {
 #endif
 
-extern int z_impl_stepper_enable(const struct device * dev);
+extern int z_impl_stepper_enable(const struct device * dev, const bool enable);
 
 __pinned_func
-static inline int stepper_enable(const struct device * dev)
+static inline int stepper_enable(const struct device * dev, const bool enable)
 {
 #ifdef CONFIG_USERSPACE
 	if (z_syscall_trap()) {
 		union { uintptr_t x; const struct device * val; } parm0 = { .val = dev };
-		return (int) arch_syscall_invoke1(parm0.x, K_SYSCALL_STEPPER_ENABLE);
+		union { uintptr_t x; const bool val; } parm1 = { .val = enable };
+		return (int) arch_syscall_invoke2(parm0.x, parm1.x, K_SYSCALL_STEPPER_ENABLE);
 	}
 #endif
 	compiler_barrier();
-	return z_impl_stepper_enable(dev);
+	return z_impl_stepper_enable(dev, enable);
 }
 
 #if defined(CONFIG_TRACING_SYSCALL)
 #ifndef DISABLE_SYSCALL_TRACING
 
-#define stepper_enable(dev) ({ 	int syscall__retval; 	sys_port_trace_syscall_enter(K_SYSCALL_STEPPER_ENABLE, stepper_enable, dev); 	syscall__retval = stepper_enable(dev); 	sys_port_trace_syscall_exit(K_SYSCALL_STEPPER_ENABLE, stepper_enable, dev, syscall__retval); 	syscall__retval; })
-#endif
-#endif
-
-
-extern int z_impl_stepper_disable(const struct device * dev);
-
-__pinned_func
-static inline int stepper_disable(const struct device * dev)
-{
-#ifdef CONFIG_USERSPACE
-	if (z_syscall_trap()) {
-		union { uintptr_t x; const struct device * val; } parm0 = { .val = dev };
-		return (int) arch_syscall_invoke1(parm0.x, K_SYSCALL_STEPPER_DISABLE);
-	}
-#endif
-	compiler_barrier();
-	return z_impl_stepper_disable(dev);
-}
-
-#if defined(CONFIG_TRACING_SYSCALL)
-#ifndef DISABLE_SYSCALL_TRACING
-
-#define stepper_disable(dev) ({ 	int syscall__retval; 	sys_port_trace_syscall_enter(K_SYSCALL_STEPPER_DISABLE, stepper_disable, dev); 	syscall__retval = stepper_disable(dev); 	sys_port_trace_syscall_exit(K_SYSCALL_STEPPER_DISABLE, stepper_disable, dev, syscall__retval); 	syscall__retval; })
+#define stepper_enable(dev, enable) ({ 	int syscall__retval; 	sys_port_trace_syscall_enter(K_SYSCALL_STEPPER_ENABLE, stepper_enable, dev, enable); 	syscall__retval = stepper_enable(dev, enable); 	sys_port_trace_syscall_exit(K_SYSCALL_STEPPER_ENABLE, stepper_enable, dev, enable, syscall__retval); 	syscall__retval; })
 #endif
 #endif
 
@@ -279,29 +257,6 @@ static inline int stepper_run(const struct device * dev, enum stepper_direction 
 #ifndef DISABLE_SYSCALL_TRACING
 
 #define stepper_run(dev, direction) ({ 	int syscall__retval; 	sys_port_trace_syscall_enter(K_SYSCALL_STEPPER_RUN, stepper_run, dev, direction); 	syscall__retval = stepper_run(dev, direction); 	sys_port_trace_syscall_exit(K_SYSCALL_STEPPER_RUN, stepper_run, dev, direction, syscall__retval); 	syscall__retval; })
-#endif
-#endif
-
-
-extern int z_impl_stepper_stop(const struct device * dev);
-
-__pinned_func
-static inline int stepper_stop(const struct device * dev)
-{
-#ifdef CONFIG_USERSPACE
-	if (z_syscall_trap()) {
-		union { uintptr_t x; const struct device * val; } parm0 = { .val = dev };
-		return (int) arch_syscall_invoke1(parm0.x, K_SYSCALL_STEPPER_STOP);
-	}
-#endif
-	compiler_barrier();
-	return z_impl_stepper_stop(dev);
-}
-
-#if defined(CONFIG_TRACING_SYSCALL)
-#ifndef DISABLE_SYSCALL_TRACING
-
-#define stepper_stop(dev) ({ 	int syscall__retval; 	sys_port_trace_syscall_enter(K_SYSCALL_STEPPER_STOP, stepper_stop, dev); 	syscall__retval = stepper_stop(dev); 	sys_port_trace_syscall_exit(K_SYSCALL_STEPPER_STOP, stepper_stop, dev, syscall__retval); 	syscall__retval; })
 #endif
 #endif
 

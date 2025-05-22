@@ -6,6 +6,6 @@
 #include <zephyr/device.h>
 
 int main(void) {
-    initialise_pwm();
+    printk("here\n");
     test();
 }

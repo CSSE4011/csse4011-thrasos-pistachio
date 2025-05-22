@@ -1,35 +1,36 @@
 # Available runners configured by board.cmake.
 runners:
-- nrfutil
 - nrfjprog
+- nrfutil
 - jlink
 - pyocd
 - openocd
 
 # Default flash runner if --runner is not given.
-flash-runner: nrfutil
+flash-runner: nrfjprog
 
 # Default debug runner if --runner is not given.
 debug-runner: jlink
 
 # Common runner configuration values.
 config:
-  board_dir: /Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/boards/nordic/nrf52840dk
+  board_dir: /Users/wendi/csse4011/repo/zephyr/boards/nordic/nrf52840dk
   # Build outputs:
   elf_file: zephyr.elf
   hex_file: zephyr.hex
   bin_file: zephyr.bin
   # Host tools:
-  gdb: /Users/emilynilsen/zephyr_install/zephyr-sdk-0.17.0/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb
+  gdb: /Users/wendi/zephyr_install/zephyr-sdk-0.17.0/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb
   openocd: /opt/homebrew/bin/openocd
   openocd_search:
-    - /Users/emilynilsen/zephyr_install/zephyr-sdk-0.17.0/sysroots/arm64-pokysdk-linux/usr/share/openocd/scripts
+    - /Users/wendi/zephyr_install/zephyr-sdk-0.17.0/sysroots/arm64-pokysdk-linux/usr/share/openocd/scripts
 
 # Runner specific arguments
 args:
-  nrfutil:
-    - --ext-mem-config-file=/Users/emilynilsen/csse4011-thrasos-pistachio/zephyr/boards/nordic/nrf52840dk/support/nrf52840dk_qspi_nrfutil_config.json
   nrfjprog:
+    []
+
+  nrfutil:
     []
 
   jlink:

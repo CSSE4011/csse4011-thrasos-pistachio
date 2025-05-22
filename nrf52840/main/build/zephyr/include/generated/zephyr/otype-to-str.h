@@ -41,6 +41,8 @@ case K_OBJ_SENSOR_DECODER_API: ret = "sensor_decoder_api"; break;
 #endif
 /* Driver subsystems */
 case K_OBJ_DRIVER_GPIO: ret = "gpio driver"; break;
+case K_OBJ_DRIVER_LED: ret = "led driver"; break;
+case K_OBJ_DRIVER_PWM: ret = "pwm driver"; break;
 case K_OBJ_DRIVER_SHARED_IRQ: ret = "shared_irq driver"; break;
 case K_OBJ_DRIVER_CRYPTO: ret = "crypto driver"; break;
 case K_OBJ_DRIVER_ADC: ret = "adc driver"; break;
@@ -77,7 +79,7 @@ case K_OBJ_DRIVER_I2C_TARGET: ret = "i2c_target driver"; break;
 case K_OBJ_DRIVER_I2S: ret = "i2s driver"; break;
 case K_OBJ_DRIVER_I3C: ret = "i3c driver"; break;
 case K_OBJ_DRIVER_IPM: ret = "ipm driver"; break;
-case K_OBJ_DRIVER_LED: ret = "led driver"; break;
+case K_OBJ_DRIVER_KSCAN: ret = "kscan driver"; break;
 case K_OBJ_DRIVER_LED_STRIP: ret = "led_strip driver"; break;
 case K_OBJ_DRIVER_LORA: ret = "lora driver"; break;
 case K_OBJ_DRIVER_MBOX: ret = "mbox driver"; break;
@@ -88,7 +90,6 @@ case K_OBJ_DRIVER_MSPI: ret = "mspi driver"; break;
 case K_OBJ_DRIVER_PECI: ret = "peci driver"; break;
 case K_OBJ_DRIVER_PS2: ret = "ps2 driver"; break;
 case K_OBJ_DRIVER_PTP_CLOCK: ret = "ptp_clock driver"; break;
-case K_OBJ_DRIVER_PWM: ret = "pwm driver"; break;
 case K_OBJ_DRIVER_REGULATOR_PARENT: ret = "regulator_parent driver"; break;
 case K_OBJ_DRIVER_REGULATOR: ret = "regulator driver"; break;
 case K_OBJ_DRIVER_RESET: ret = "reset driver"; break;

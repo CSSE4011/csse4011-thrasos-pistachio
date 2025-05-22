@@ -14,7 +14,6 @@ static void * const no_syscall_impl Z_GENERIC_SECTION(llext_no_syscall_impl);
  * linker outside this file will be exported as NULL and simply fail when
  * an extension requiring them is loaded.
  */
-extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_device_deinit;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_device_get_binding;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_device_get_by_dt_nodelabel;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_device_init;
@@ -128,11 +127,24 @@ extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_k_uptime_ticks;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_k_usleep;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_k_wakeup;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_k_yield;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_led_blink;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_led_get_info;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_led_off;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_led_on;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_led_set_brightness;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_led_set_channel;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_led_set_color;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_led_write_channels;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_log_buffered_cnt;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_log_filter_set;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_log_frontend_filter_set;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_log_panic;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_log_process;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_pwm_capture_cycles;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_pwm_disable_capture;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_pwm_enable_capture;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_pwm_get_cycles_per_sec;
+extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_pwm_set_cycles;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_sys_clock_hw_cycles_per_sec_runtime_get;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_uart_config_get;
 extern __weak ALIAS_OF(no_syscall_impl) void * const z_impl_uart_configure;

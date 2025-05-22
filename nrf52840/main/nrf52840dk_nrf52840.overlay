@@ -1,0 +1,13 @@
+&pwm0 {
+    status = "okay";
+    pinctrl-0 = <&pwm0_custom>;
+    pinctrl-names = "default", "sleep";
+};
+
+&pinctrl {
+    pwm0_custom: pwm0_custom {
+        group1 {
+            psels = <NRF_PSEL(PWM_OUT0, 0, 13)>, <NRF_PSEL(PWM_OUT1, 0, 14)>;
+        };
+    };
+};
