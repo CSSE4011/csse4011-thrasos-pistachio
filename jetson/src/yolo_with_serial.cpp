@@ -5,22 +5,39 @@
 #include <memory>
 #include <algorithm>
 #include <numeric>
-#include <onnxruntime_cxx_api.h> // NEW: For ONNX Runtime
+#include <NvInfer.h>
+#include <cuda_runtime_api.h>
 #include <opencv2/opencv.hpp>
 #include <signal.h>
-#include <onnxruntime_c_api.h> 
 #include <chrono>
-
-#include <iostream>
-#include <string>
-// Required POSIX headers for serial communication
-#include <fcntl.h>      // File control definitions (O_RDWR, O_NOCTTY, O_SYNC)
-#include <termios.h>    // Terminal I/O definitions (termios struct, speed_t, baud rates)
-#include <unistd.h>     // UNIX standard definitions (close, read, write)
+#include <termios.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <cstring>
 #include <sys/ioctl.h>
 
-//  make -j$(sysctl -n hw.ncpu)
-//  ./yolov8_inference ../yolov8n.onnx 1 
+// Logger for TensorRT info/warning/errors
+class Logger : public nvinfer1::ILogger
+{
+public:
+    void log(Severity severity, const char* msg) noexcept override
+    {
+        // Skip info messages
+        if (severity == Severity::kINFO) return;
+        
+        switch (severity)
+        {
+            case Severity::kINTERNAL_ERROR: std::cerr << "INTERNAL_ERROR: "; break;
+            case Severity::kERROR: std::cerr << "ERROR: "; break;
+            case Severity::kWARNING: std::cerr << "WARNING: "; break;
+            case Severity::kINFO: std::cerr << "INFO: "; break;
+            case Severity::kVERBOSE: std::cerr << "VERBOSE: "; break;
+            default: std::cerr << "UNKNOWN: "; break;
+        }
+        std::cerr << msg << std::endl;
+    }
+};
+
 
 class SerialComm
 {
@@ -130,6 +147,17 @@ private:
     }
 };
 
+// Destroy TensorRT objects
+struct TRTDestroy
+{
+    template <class T>
+    void operator()(T* obj) const
+    {
+        if (obj)
+            obj->destroy();
+    }
+};
+
 // Signal handler for clean shutdown
 bool signal_received = false;
 
@@ -142,17 +170,24 @@ void sig_handler(int signo)
     }
 }
 
-// YOLOv8 Inference class using ONNX Runtime
+// YOLOv8 Inference class using TensorRT
 class YOLOv8Inference
 {
 private:
-    Ort::Env env;
-    Ort::Session session;
-    Ort::MemoryInfo memory_info;
-
-    std::vector<int64_t> inputDims;
-    std::vector<int64_t> outputDims; // Output shape will be dynamic based on predictions
-
+    Logger logger;
+    std::unique_ptr<nvinfer1::ICudaEngine, TRTDestroy> engine;
+    std::unique_ptr<nvinfer1::IExecutionContext, TRTDestroy> context;
+    cudaStream_t stream;
+    
+    // Input and output buffer pointers
+    void* buffers[2]; // Assuming one input, one output
+    int inputIndex;
+    int outputIndex;
+    size_t inputSize;
+    size_t outputSize;
+    nvinfer1::Dims inputDims;
+    nvinfer1::Dims outputDims;
+    
     int modelWidth;
     int modelHeight;
 
@@ -167,53 +202,106 @@ private:
     std::vector<std::string> class_names;
 
 public:
-    YOLOv8Inference(const std::string& modelPath)
-        : env(ORT_LOGGING_LEVEL_WARNING, "YOLOv8_Inference_ONNX"),
-          session(nullptr),
-          memory_info(Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault)),
+    YOLOv8Inference(const std::string& engineFile) 
+        : stream(nullptr), 
           networkFPS(0.0f),
           confidenceThreshold(0.25f), // Default confidence
           nmsThreshold(0.45f),        // Default NMS IOU threshold
           numClasses(80)             // For COCO dataset (YOLOv8n default)
     {
-        // Setup session options
-        Ort::SessionOptions session_options;
-        session_options.SetIntraOpNumThreads(1);
-        session_options.SetGraphOptimizationLevel(ORT_ENABLE_EXTENDED);
-
-        // Optional: Enable CUDA if available
-        // To use CUDA, you need ONNX Runtime built with CUDA support and a CUDA-enabled GPU.
-        // If not, it will fall back to CPU.
-        // OrtCUDAProviderOptions cuda_options;
-        // session_options.AppendExecutionProvider_CUDA(cuda_options);
-        
-        std::cout << "Loading ONNX model: " << modelPath << std::endl;
-        session = Ort::Session(env, modelPath.c_str(), session_options);
-
-        // Get input shape
-        Ort::TypeInfo input_type_info = session.GetInputTypeInfo(0);
-        auto tensor_info = input_type_info.GetTensorTypeAndShapeInfo();
-        inputDims = tensor_info.GetShape();
-
-        if (inputDims.size() != 4 || inputDims[0] != 1 || inputDims[1] != 3) {
-            throw std::runtime_error("Unexpected input shape. Expected [1, 3, H, W]. Got: " + std::to_string(inputDims[0]) + "," + std::to_string(inputDims[1]) + "," + std::to_string(inputDims[2]) + "," + std::to_string(inputDims[3]));
+        // Load the engine
+        std::cout << "Loading TensorRT engine: " << engineFile << std::endl;
+        std::ifstream file(engineFile, std::ios::binary);
+        if (!file.good()) {
+            throw std::runtime_error("Failed to open engine file: " + engineFile);
         }
-        //modelHeight = inputDims[2];
-        //modelWidth = inputDims[3];
+        
+        file.seekg(0, std::ios::end);
+        size_t size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        
+        std::vector<char> engineData(size);
+        file.read(engineData.data(), size);
+        
+        if (!file) {
+            throw std::runtime_error("Failed to read engine file");
+        }
+        
+        // Create runtime and deserialize engine
+        std::unique_ptr<nvinfer1::IRuntime, TRTDestroy> runtime(nvinfer1::createInferRuntime(logger));
+        engine.reset(runtime->deserializeCudaEngine(engineData.data(), size));
+        
+        if (!engine) {
+            throw std::runtime_error("Failed to deserialize engine");
+        }
+        
+        // Create execution context
+        context.reset(engine->createExecutionContext());
+        if (!context) {
+            throw std::runtime_error("Failed to create execution context");
+        }
+        
+        // Create CUDA stream
+        cudaError_t err = cudaStreamCreate(&stream);
+        if (err != cudaSuccess) {
+            throw std::runtime_error("Failed to create CUDA stream");
+        }
+        
+        // Find input and output binding indices and allocate memory
+        inputIndex = -1;
+        outputIndex = -1;
+        
+        for (int i = 0; i < engine->getNbBindings(); i++) {
+            if (engine->bindingIsInput(i)) {
+                inputIndex = i;
+                inputDims = engine->getBindingDimensions(i);
+            } else {
+                outputIndex = i;
+                outputDims = engine->getBindingDimensions(i);
+            }
+        }
+        
+        if (inputIndex == -1 || outputIndex == -1) {
+            throw std::runtime_error("Could not find input or output binding");
+        }
 
-        modelHeight = 640;
-        modelWidth = 640;
-
-        // Get output shape (this will be dynamic for YOLOv8 detections, but we get first output's shape)
-        Ort::TypeInfo output_type_info = session.GetOutputTypeInfo(0);
-        auto output_tensor_info = output_type_info.GetTensorTypeAndShapeInfo();
-        outputDims = output_tensor_info.GetShape(); // This will typically be [1, num_features, num_predictions] or [1, num_predictions, num_features]
-
-        std::cout << "ONNX model loaded successfully" << std::endl;
-        std::cout << "Input shape: " << inputDims[0] << " " << inputDims[1] << " " << inputDims[2] << " " << inputDims[3] << std::endl;
-        std::cout << "Output shape: " << outputDims[0] << " " << outputDims[1] << " " << outputDims[2] << std::endl;
-
-
+        if (inputDims.nbDims != 4 || inputDims.d[0] != 1 || inputDims.d[1] != 3) {
+            throw std::runtime_error("Unexpected input shape. Expected [1, 3, H, W].");
+        }
+        
+        modelHeight = inputDims.d[2];
+        modelWidth = inputDims.d[3];
+        
+        // Calculate sizes and allocate memory
+        inputSize = 1;
+        for (int i = 0; i < inputDims.nbDims; i++) {
+            inputSize *= inputDims.d[i];
+        }
+        inputSize *= sizeof(float);
+        
+        outputSize = 1;
+        for (int i = 0; i < outputDims.nbDims; i++) {
+            outputSize *= outputDims.d[i];
+        }
+        outputSize *= sizeof(float);
+        
+        // Allocate GPU memory
+        cudaMalloc(&buffers[inputIndex], inputSize);
+        cudaMalloc(&buffers[outputIndex], outputSize);
+        
+        std::cout << "TensorRT engine loaded successfully" << std::endl;
+        std::cout << "Input shape: ";
+        for (int i = 0; i < inputDims.nbDims; i++) {
+            std::cout << inputDims.d[i] << " ";
+        }
+        std::cout << std::endl;
+        
+        std::cout << "Output shape: ";
+        for (int i = 0; i < outputDims.nbDims; i++) {
+            std::cout << outputDims.d[i] << " ";
+        }
+        std::cout << std::endl;
+        
         // Initialize FPS timer
         lastTime = std::chrono::steady_clock::now();
         
@@ -231,7 +319,13 @@ public:
         };
     }
     
-    // No explicit destructor needed for Ort::Session and Ort::Env as they handle their own memory.
+    ~YOLOv8Inference()
+    {
+        // Free allocated resources
+        if (buffers[inputIndex]) cudaFree(buffers[inputIndex]);
+        if (buffers[outputIndex]) cudaFree(buffers[outputIndex]);
+        if (stream) cudaStreamDestroy(stream);
+    }
 
     // Helper for NMS (Non-Maximum Suppression)
     // Detections should be a flat vector of [x1, y1, x2, y2, confidence, class_id]
@@ -292,19 +386,20 @@ public:
     
         return (union_area > 0) ? intersection_area / union_area : 0.0f;
     }
+
     std::vector<float> parseYOLOOutput(const std::vector<float>& rawOutput, int frameWidth, int frameHeight) {
         std::vector<float> detections;
         
         // YOLOv8 output: [1, 84, 8400] where 84 = 4 bbox coords + 80 classes
         // Note: YOLOv8 doesn't have explicit objectness score, just class probabilities
         
-        if (rawOutput.empty() || outputDims.size() < 3) {
+        if (rawOutput.empty() || outputDims.nbDims < 3) {
             std::cerr << "Error: Invalid output tensor." << std::endl;
             return detections;
         }
     
-        const int numPredictions = outputDims[2]; // 8400 in [1, 84, 8400]
-        const int numElements = outputDims[1];    // 84 in [1, 84, 8400]
+        const int numPredictions = outputDims.d[2]; // 8400 in [1, 84, 8400]
+        const int numElements = outputDims.d[1];    // 84 in [1, 84, 8400]
         
         // Verify we have the expected format
         if (numElements != (numClasses + 4)) {
@@ -363,177 +458,8 @@ public:
         std::vector<float> finalDetections = applyNMS(detections, nmsThreshold);
         return finalDetections;
     }
-
-    // Parses YOLOv8 output from ONNX Runtime (expected format: [1, 84, num_detections])
-    // std::vector<float> parseYOLOOutput(const std::vector<float>& rawOutput, int frameWidth, int frameHeight) {
-
-        
-    //     std::vector<float> detections;
-        
-    //     // YOLOv8 ONNX output is usually [1, num_classes + 4, num_predictions] (e.g., [1, 84, 8400])
-    //     // Or sometimes transposed to [1, num_predictions, num_classes + 4]
-    //     // Let's assume the common [1, 84, num_predictions] or [1, 80+4, num_predictions] where 80 is numClasses
-    //     // Output dimensions: [1, 84, N] where N is number of potential detections (e.g., 8400)
-    //     // 84 = 4 (bbox) + 1 (objectness) + 79 (class probabilities) -- adjusted to 80 classes.
-    //     // It's 4 bbox (cx,cy,w,h) + objectness + 80 classes = 85.
-    //     // So outputDims[1] should be 85 for YOLOv8n COCO
-        
-    //     if (rawOutput.empty() || outputDims.size() < 3 || outputDims[1] != (numClasses + 4)) {
-    //         std::cerr << "Error: Unexpected output tensor shape or size for YOLOv8." << std::endl;
-    //         // Optionally print dimensions for debugging
-    //         // std::cerr << "OutputDims: ";
-    //         // for(long long d : outputDims) std::cerr << d << " ";
-    //         // std::cerr << std::endl;
-    //         return detections;
-    //     }
-
-    //     const int numPredictions = outputDims[2]; // N in [1, 84, N]
-    //     const int stride = numClasses + 4; // 84 or 85 if it's 80 classes
-
-    //     // const int numPredictions = rawOutput.size() / 84;
-
-    //     // std::cout << "num_pred" << numPredictions << std::endl;
-    
-    //     // for (int i = 0; i < numPredictions; ++i) {
-    //     //     const float* prediction = rawOutput.data() + i * 84;
-    
-    //     //     float objectness = prediction[4];
-    
-    //     //     // Find the class with the highest probability
-    //     //     float maxClassProb = 0.0f;
-    //     //     int classId = -1;
-    //     //     for (int c = 0; c < numClasses; ++c) {
-    //     //         if (prediction[5 + c] > maxClassProb) {
-    //     //             maxClassProb = prediction[5 + c];
-    //     //             classId = c;
-    //     //         }
-    //     //     }
-    
-    //     //     float confidence = objectness * maxClassProb;
-
-    //     for (int i = 0; i < numPredictions; ++i) {
-    //         // Accessing elements for [1, stride, num_predictions] format
-    //         // Data is laid out as: [box1_cx, box1_cy, ..., box2_cx, box2_cy, ..., ]
-    //         // So for prediction `i`, element `j` is at `j * num_predictions + i`
-            
-    //         float objectness = rawOutput[4 * numPredictions + i]; // Confidence score for the object
-            
-    //         float maxClassProb = 0.0f;
-    //         int classId = -1;
-    //         for (int c = 0; c < numClasses; ++c) {
-    //             float classProb = rawOutput[(5 + c) * numPredictions + i]; // Class probability
-    //             if (classProb > maxClassProb) {
-    //                 maxClassProb = classProb;
-    //                 classId = c;
-                    
-    //             }
-    //         }
-
-    //         float confidence = objectness * maxClassProb;
-
-    //         if (confidence > confidenceThreshold) {
-    //             // Extract bounding box coordinates (normalized)
-    //             float centerX = rawOutput[0 * numPredictions + i];
-    //             float centerY = rawOutput[1 * numPredictions + i];
-    //             float width = rawOutput[2 * numPredictions + i];
-    //             float height = rawOutput[3 * numPredictions + i];
-    
-    //             // Convert (cx, cy, w, h) to (x1, y1, x2, y2) and scale to original image size
-    //             float x1 = (centerX - width / 2.0f) * frameWidth / modelWidth;
-    //             float y1 = (centerY - height / 2.0f) * frameHeight / modelHeight;
-    //             float x2 = (centerX + width / 2.0f) * frameWidth / modelWidth;
-    //             float y2 = (centerY + height / 2.0f) * frameHeight / modelHeight;
-    
-    //             detections.push_back(x1);
-    //             detections.push_back(y1);
-    //             detections.push_back(x2);
-    //             detections.push_back(y2);
-    //             detections.push_back(confidence);
-    //             detections.push_back(static_cast<float>(classId));
-
-    //         }
-    //     }
-        
-
-    //     // Apply Non-Maximum Suppression (NMS)
-    //     std::vector<float> finalDetections = applyNMS(detections, nmsThreshold);
-
-    //     return finalDetections;
-    // }
     
     // Process a single image
-    // std::vector<float> processImage(const cv::Mat& image)
-    // {
-    //     // Start timing for FPS calculation
-    //     auto startTime = std::chrono::steady_clock::now();
-        
-    //     // Preprocess image
-    //     cv::Mat resized_rgb;
-    //     cv::resize(image, resized_rgb, cv::Size(modelWidth, modelHeight));
-    //     cv::cvtColor(resized_rgb, resized_rgb, cv::COLOR_BGR2RGB); // Convert to RGB
-
-    //     // Normalize to [0,1] and convert to float32
-    //     cv::Mat normalized;
-    //     resized_rgb.convertTo(normalized, CV_32F, 1.0f/255.0f);
-        
-    //     // Prepare input tensor (NCHW format)
-    //     // inputDims = [1, 3, H, W]
-    //     std::vector<float> inputTensorValues(1 * 3 * modelHeight * modelWidth);
-    //     for (int c = 0; c < 3; ++c) {
-    //         for (int h = 0; h < modelHeight; ++h) {
-    //             for (int w = 0; w < modelWidth; ++w) {
-    //                 inputTensorValues[c * modelHeight * modelWidth + h * modelWidth + w] = normalized.at<cv::Vec3f>(h, w)[c];
-    //             }
-    //         }
-    //     }
-
-    //     // Create input tensor for ONNX Runtime
-    //     Ort::Value input_tensor = Ort::Value::CreateTensor<float>(memory_info, 
-    //                                                                inputTensorValues.data(), 
-    //                                                                inputTensorValues.size(), 
-    //                                                                inputDims.data(), 
-    //                                                                inputDims.size());
-        
-    //     // Try this first, it's often a global function or similar
-    //     // Corrected ONNX Runtime API for allocator (using C API function):
-    //     // Corrected ONNX Runtime API for allocator (instantiate Ort::AllocatorWithDefaultOptions)
-    //     // Create an instance of the AllocatorWithDefaultOptions struct/class.
-    //     // This object will handle the default allocator internally.
-    //     Ort::AllocatorWithDefaultOptions allocator_with_options;
-
-    //     // Get the raw OrtAllocator* pointer from this object.
-    //     // The .get() method is the standard way to retrieve the raw pointer from C++ API wrappers.
-    //     OrtAllocator* default_allocator_raw = allocator_with_options;
-
-    //     // Now use this raw allocator pointer for GetInputNameAllocated and GetOutputNameAllocated
-    //     Ort::AllocatedStringPtr input_name_ptr = session.GetInputNameAllocated(0, default_allocator_raw);
-    //     const char* input_names[] = {input_name_ptr.get()};
-
-    //     Ort::AllocatedStringPtr output_name_ptr = session.GetOutputNameAllocated(0, default_allocator_raw);
-    //     const char* output_names[] = {output_name_ptr.get()};
-
-
-    //     // Execute inference
-    //     std::vector<Ort::Value> ort_outputs = session.Run(Ort::RunOptions{nullptr}, 
-    //                                                     input_names, &input_tensor, 1, 
-    //                                                     output_names, 1);
-        
-    //     // Get output data
-    //     float* rawOutputData = ort_outputs[0].GetTensorMutableData<float>();
-    //     // The total number of elements in the output tensor
-    //     size_t output_tensor_size = ort_outputs[0].GetTensorTypeAndShapeInfo().GetElementCount();
-    //     std::vector<float> outputData(rawOutputData, rawOutputData + output_tensor_size);
-
-    //     std::vector<float> outputDetections = parseYOLOOutput(outputData, image.cols, image.rows);
-        
-    //     // Update FPS calculation
-    //     auto endTime = std::chrono::steady_clock::now();
-    //     float ms = std::chrono::duration<float, std::milli>(endTime - startTime).count();
-    //     networkFPS = 1000.0f / ms;
-        
-    //     return outputDetections; // Return number of detected objects
-    // }
-    
     std::vector<float> processImage(const cv::Mat& image)
     {
         // Start timing for FPS calculation
@@ -548,60 +474,36 @@ public:
         cv::Mat normalized;
         resized_rgb.convertTo(normalized, CV_32F, 1.0f/255.0f);
         
+        // Allocate host memory for input
+        std::vector<float> inputData(inputSize / sizeof(float));
+        
         // Prepare input tensor (NCHW format)
         // inputDims = [1, 3, H, W]
-        std::vector<float> inputTensorValues(1 * 3 * modelHeight * modelWidth);
         for (int c = 0; c < 3; ++c) {
             for (int h = 0; h < modelHeight; ++h) {
                 for (int w = 0; w < modelWidth; ++w) {
-                    inputTensorValues[c * modelHeight * modelWidth + h * modelWidth + w] = 
+                    inputData[c * modelHeight * modelWidth + h * modelWidth + w] = 
                         normalized.at<cv::Vec3f>(h, w)[c];
                 }
             }
         }
-
-        // Create input tensor for ONNX Runtime
-        Ort::Value input_tensor = Ort::Value::CreateTensor<float>(memory_info, 
-                                                                inputTensorValues.data(), 
-                                                                inputTensorValues.size(), 
-                                                                inputDims.data(), 
-                                                                inputDims.size());
         
-        // Get input/output names
-        Ort::AllocatorWithDefaultOptions allocator_with_options;
-        OrtAllocator* default_allocator_raw = allocator_with_options;
-
-        Ort::AllocatedStringPtr input_name_ptr = session.GetInputNameAllocated(0, default_allocator_raw);
-        const char* input_names[] = {input_name_ptr.get()};
-
-        Ort::AllocatedStringPtr output_name_ptr = session.GetOutputNameAllocated(0, default_allocator_raw);
-        const char* output_names[] = {output_name_ptr.get()};
-
+        // Copy input data to GPU
+        cudaMemcpy(buffers[inputIndex], inputData.data(), inputSize, cudaMemcpyHostToDevice);
+        
         // Execute inference
-        std::vector<Ort::Value> ort_outputs = session.Run(Ort::RunOptions{nullptr}, 
-                                                        input_names, &input_tensor, 1, 
-                                                        output_names, 1);
-        
-        // Get output tensor info
-        Ort::TensorTypeAndShapeInfo output_info = ort_outputs[0].GetTensorTypeAndShapeInfo();
-        outputDims = output_info.GetShape(); // Make sure outputDims is updated!
-        
-        // Get output data
-        float* rawOutputData = ort_outputs[0].GetTensorMutableData<float>();
-        size_t output_tensor_size = output_info.GetElementCount();
-        std::vector<float> outputData(rawOutputData, rawOutputData + output_tensor_size);
-
-        // Debug output (remove this after confirming it works)
-        static bool first_run = true;
-        if (first_run) {
-            std::cout << "Output tensor shape: ";
-            for (int64_t dim : outputDims) {
-                std::cout << dim << " ";
-            }
-            std::cout << std::endl;
-            std::cout << "Total elements: " << output_tensor_size << std::endl;
-            first_run = false;
+        if (!context->enqueueV2(buffers, stream, nullptr)) {
+            throw std::runtime_error("Failed to execute inference");
         }
+        
+        // Allocate host memory for output
+        std::vector<float> outputData(outputSize / sizeof(float));
+        
+        // Copy output back to host
+        cudaMemcpy(outputData.data(), buffers[outputIndex], outputSize, cudaMemcpyDeviceToHost);
+        
+        // Synchronize stream
+        cudaStreamSynchronize(stream);
 
         // Parse YOLO output - pass original image dimensions, not model dimensions
         std::vector<float> outputDetections = parseYOLOOutput(outputData, image.cols, image.rows);
@@ -613,6 +515,7 @@ public:
         
         return outputDetections;
     }
+    
     float GetNetworkFPS() const { return networkFPS; }
 
     std::string getClassLabel(int classId) const {
@@ -625,16 +528,15 @@ public:
 
 void printUsage()
 {
-    std::cout << "Usage: yolov8_video_inference <onnx_model_file> <camera_id or video_file>" << std::endl;
-    std::cout << "  onnx_model_file: Path to ONNX model file (e.g., yolov8n.onnx)" << std::endl;
+    std::cout << "Usage: yolov8_video_inference <engine_file> <camera_id or video_file>" << std::endl;
+    std::cout << "  engine_file: Path to TensorRT engine file (e.g., yolov8n.engine)" << std::endl;
     std::cout << "  camera_id: Camera device ID (e.g., 0 for default camera)" << std::endl;
     std::cout << "  video_file: Path to video file (if using a file instead of camera)" << std::endl;
     std::cout << std::endl;
     std::cout << "Examples:" << std::endl;
-    std::cout << "  yolov8_video_inference yolov8n.onnx 0" << std::endl;
-    std::cout << "  yolov8_video_inference yolov8n.onnx /path/to/video.mp4" << std::endl;
+    std::cout << "  yolov8_video_inference yolov8n.engine 0" << std::endl;
+    std::cout << "  yolov8_video_inference yolov8n.engine /path/to/video.mp4" << std::endl;
 }
-
 
 int main(int argc, char** argv)
 {
@@ -644,7 +546,7 @@ int main(int argc, char** argv)
     }
     
     // Parse command line
-    std::string modelFile = argv[1]; // Now expects an ONNX model
+    std::string engineFile = argv[1]; // Now expects a TensorRT engine
     std::string videoSource = argv[2];
     std::string serialPort = argv[3];
     
@@ -654,6 +556,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    // Initialize serial communication if port is provided
     std::unique_ptr<SerialComm> serial;
     if (!serialPort.empty()) {
         serial = std::make_unique<SerialComm>(serialPort);
@@ -690,8 +593,11 @@ int main(int argc, char** argv)
     std::cout << "Video dimensions: " << width << "x" << height << std::endl;
     
     try {
+        // Initialize CUDA
+        cudaSetDevice(0);
+        
         // Create YOLOv8 inference object
-        YOLOv8Inference inference(modelFile); // Pass ONNX model path
+        YOLOv8Inference inference(engineFile); // Pass TensorRT engine path
         
         // Create window for display
         cv::namedWindow("YOLOv8 Inference", cv::WINDOW_NORMAL);
@@ -730,8 +636,9 @@ int main(int argc, char** argv)
                 // Get the class label
                 std::string label = inference.getClassLabel(classId); 
 
-                std::cout << "found" << label << " conf" << confidence << std::endl;
-
+                std::cout << "found " << label << " conf " << confidence << std::endl;
+                
+                // Add to detected classes list (avoid duplicates)
                 if (std::find(detectedClasses.begin(), detectedClasses.end(), label) == detectedClasses.end()) {
                     detectedClasses.push_back(label);
                 }
@@ -758,6 +665,7 @@ int main(int argc, char** argv)
                 cv::putText(frame, text, textOrg, cv::FONT_HERSHEY_SIMPLEX, 0.7, color, 2);
             }
 
+            // Send detection data over serial
             if (serial && serial->isConnected()) {
                 if (detectedClasses.empty()) {
                     // Send "NONE" if no objects detected
@@ -795,9 +703,6 @@ int main(int argc, char** argv)
         cap.release();
         cv::destroyAllWindows();
         
-    } catch (const Ort::Exception& e) {
-        std::cerr << "ONNX Runtime Error: " << e.what() << std::endl;
-        return 1;
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
