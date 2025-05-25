@@ -45,14 +45,19 @@ public:
     bool init()
     {
         // Open serial port
-        serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
+        std::cout << "trying to open now" << std::endl;
+        //serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
+        serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
         if (serial_fd < 0) {
             std::cerr << "Error opening serial port " << port << ": " << strerror(errno) << std::endl;
             return false;
         }
         
+        std::cout << "openned" << std::endl;
+
         // Configure serial port
         struct termios tty;
+
         if (tcgetattr(serial_fd, &tty) != 0) {
             std::cerr << "Error getting serial port attributes: " << strerror(errno) << std::endl;
             close(serial_fd);
@@ -60,9 +65,9 @@ public:
             return false;
         }
         
-        // Set baud rate
-        cfsetospeed(&tty, getBaudRate(baudrate));
-        cfsetispeed(&tty, getBaudRate(baudrate));
+        // Set baud rate at 115200
+        cfsetospeed(&tty, B115200);
+        cfsetispeed(&tty, B115200);
         
         // Configure 8N1 (8 data bits, no parity, 1 stop bit)
         tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
@@ -111,22 +116,6 @@ public:
     bool isConnected() const
     {
         return serial_fd >= 0;
-    }
-
-private:
-    speed_t getBaudRate(int baud)
-    {
-        switch (baud) {
-            case 9600: return B9600;
-            case 19200: return B19200;
-            case 38400: return B38400;
-            case 57600: return B57600;
-            case 115200: return B115200;
-            case 230400: return B230400;
-            // case 460800: return B460800;
-            // case 921600: return B921600;
-            default: return B115200;
-        }
     }
 };
 
@@ -638,8 +627,9 @@ void printUsage()
 
 int main(int argc, char** argv)
 {
-    if (argc < 3) {
+    if (argc < 4) {
         printUsage();
+        std::cout << "not enough arguments" << std::endl;
         return 1;
     }
     
