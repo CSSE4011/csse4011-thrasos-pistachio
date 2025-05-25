@@ -8,7 +8,7 @@
 #include "classification.h"
 
 #define STACKSIZE 1024
-#define RECEIVE_POSITION_PRIORITY 7
+#define RECEIVE_POSITION_PRIORITY 6
 
 #define PAN_CHANNEL 0
 static const struct device *pwm_dev = DEVICE_DT_GET(DT_NODELABEL(pwm0));
@@ -33,15 +33,16 @@ void receive_position_thread(void) {
         if (k_msgq_get(&position_servo_msgq, &pos, K_FOREVER) == 0) { // Receive position message
             set_position(pos);
         }
+        k_msleep(200);
     }
 }
 
 void test(void) {
     while (1) {
         for (int pos = 0; pos <= 2; pos += 1) {
-            printk("setting angle\n");
             set_position(pos);
             k_msleep(1000);
         }
+        k_msleep(200);
     }
 }

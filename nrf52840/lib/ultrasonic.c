@@ -11,14 +11,14 @@
 #include <stddef.h>
 #include <zephyr/sys/util.h>
 
-#define TRIG_PIN 15
-#define ECHO_PIN 16
+#define TRIG_PIN 16
+#define ECHO_PIN 15
 #define GPIO0_NODE DT_NODELABEL(gpio0)
 
 #define BIN_DEPTH_CM 50
 
 #define STACKSIZE 1024
-#define SAMPLE_FILL_LEVEL_PRIORITY 7
+#define SAMPLE_FILL_LEVEL_PRIORITY 8
 
 const struct device *gpio0 = DEVICE_DT_GET(GPIO0_NODE);
 
@@ -69,7 +69,6 @@ void sample_fill_level_thread(void) {
         float distance_cm = (duration_us * 0.0343) / 2.0;
         fill_level = distance_cm / BIN_DEPTH_CM;
     
-        printk("fill level = %.2f");
         k_msgq_put(&fill_level_msgq, &fill_level, K_NO_WAIT);
 
         k_msleep(100);

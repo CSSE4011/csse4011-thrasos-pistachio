@@ -31,7 +31,7 @@ void receive_fill_level_thread(void) {
     float fill_level;
 
     while(1) {
-        if (k_msgq_get(&position_disp_msgq, &fill_level, K_FOREVER) == 0) { // Receive position message
+        if (k_msgq_get(&fill_level_msgq, &fill_level, K_FOREVER) == 0) { // Receive position message
             printk("fill level = %.2f\n", (double)fill_level);
         }
     }
