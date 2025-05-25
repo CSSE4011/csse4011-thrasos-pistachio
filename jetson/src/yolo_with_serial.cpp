@@ -609,7 +609,7 @@ int main(int argc, char** argv)
 
             int numDetections = detections.size() / 6;
 
-            std::vector<std::string> detectedClasses;
+            std::vector<int> detectedClasses;
             
             // Iterate through the detections and draw bounding boxes
             for (int i = 0; i < numDetections; ++i) {
@@ -626,8 +626,8 @@ int main(int argc, char** argv)
                 std::cout << "found " << label << " conf " << confidence << std::endl;
                 
                 // Add to detected classes list (avoid duplicates)
-                if (std::find(detectedClasses.begin(), detectedClasses.end(), label) == detectedClasses.end()) {
-                    detectedClasses.push_back(label);
+                if (std::find(detectedClasses.begin(), detectedClasses.end(), classId) == detectedClasses.end()) {
+                    detectedClasses.push_back(classId);
                 }
 
                 // Define the color for the bounding box and text
@@ -664,7 +664,7 @@ int main(int argc, char** argv)
                         if (i > 0) {
                             message += ",";
                         } 
-                        message += detectedClasses[i];
+                        message += std::to_string(detectedClasses[i]);
                     }
                     serial->sendData(message);
                 }
