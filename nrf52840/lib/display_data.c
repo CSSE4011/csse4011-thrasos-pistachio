@@ -8,16 +8,16 @@
 #include "zephyr/kernel.h"
 
 #define STACKSIZE 1024
-#define RECEIVE_CLASSIFICATION_PRIORITY 7
+#define RECEIVE_CLASS_PRIORITY 7
 #define RECEIVE_FILL_LEVEL_PRIORITY 7
 
-void receive_classification_thread(void);
+void receive_class_thread(void);
 void receive_fill_level_thread(void);
 
-K_THREAD_DEFINE(receive_classification_tid, STACKSIZE, receive_classification_thread, NULL, NULL, NULL, RECEIVE_CLASSIFICATION_PRIORITY, 0, 0);
+K_THREAD_DEFINE(receive_class_tid, STACKSIZE, receive_class_thread, NULL, NULL, NULL, RECEIVE_CLASS_PRIORITY, 0, 0);
 K_THREAD_DEFINE(receive_fill_level_tid, STACKSIZE, receive_fill_level_thread, NULL, NULL, NULL, RECEIVE_FILL_LEVEL_PRIORITY, 0, 0);
 
-void receive_classification_thread(void) {
+void receive_class_thread(void) {
     uint8_t pos;
 
     while(1) {

@@ -1,14 +1,14 @@
-// Receive VoC bluetooth data from thingy52 
-// Receieve image serial USB data from Jetson
-// Determine waste classification
-// Send to servo/ display
-
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/gap.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/bluetooth/hci.h>
+#include <zephyr/drivers/gpio.h>
+#include <serial.h>
+
+#define BUTTON_NODE DT_ALIAS(sw0)
+static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(BUTTON_NODE, gpios);
 
 K_MSGQ_DEFINE(position_servo_msgq, sizeof(uint8_t), 10, 4);
 K_MSGQ_DEFINE(position_disp_msgq, sizeof(uint8_t), 10, 4);
@@ -19,41 +19,17 @@ K_MSGQ_DEFINE(position_disp_msgq, sizeof(uint8_t), 10, 4);
 
 #define STACKSIZE 1024
 
+#define VOC_THRESHOLD 50.0f
+
 volatile float voc_ppb_received = 0.0f;
+volatile uint8_t last_processed_class = 0;
 
 void receive_voc_thread(void);
+void button_thread(void);
+void receive_classification_thread(void);
 K_THREAD_DEFINE(voc_receive_tid, STACKSIZE, receive_voc_thread, NULL, NULL, NULL, 5, 0, 0);
-
-// #define CLASSIFICATION_TEST_PRIORITY 7
-// void classification_test_thread(void);
-
-// K_THREAD_DEFINE(classification_test_tid, STACKSIZE,
-//     classification_test_thread, NULL, NULL, NULL,
-//     CLASSIFICATION_TEST_PRIORITY, 0, 0);
-
-// void classification_test_thread(void) {
-//     // Simulated classification results: 0 = non-organic, 1 = organic
-//     uint8_t test_positions[] = {0, 1, 1, 0, 1, 1, 0, 0, 1, 1};
-//     size_t count = sizeof(test_positions) / sizeof(test_positions[0]);
-
-//     for (size_t i = 0; i < count; i++) {
-//         uint8_t pos = test_positions[i];
-
-//         // Send to servo queue
-//         k_msgq_put(&position_servo_msgq, &pos, K_NO_WAIT);
-
-//         // Send to display queue
-//         k_msgq_put(&position_disp_msgq, &pos, K_NO_WAIT);
-
-//         k_sleep(K_SECONDS(5));  // Simulate time between classifications
-//     }
-
-
-//     // Idle loop
-//     while (1) {
-//         k_sleep(K_FOREVER);
-//     }
-// }
+K_THREAD_DEFINE(button_tid, STACKSIZE, button_thread, NULL, NULL, NULL, 6, 0, 0);
+K_THREAD_DEFINE(receive_classification_tid, STACKSIZE, receive_classification_thread, NULL, NULL, NULL, 6, 0, 0);
 
 static const uint8_t TARGET_UUID[16] = {
     0x16, 0x15, 0xee, 0x18, 0x6b, 0x01, 0xec, 0x4b,
@@ -134,4 +110,60 @@ void receive_voc_thread(void) {
 	printk("Started scanning...\n");
 
 	return 0;
+}
+
+uint8_t process_class(uint8_t item_number) {
+    if (item_number >= 46 && item_number <= 55) {
+        return 0; // Organic
+    }
+
+    // Non-organic: bottles, utensils, bowls, appliances
+    if ((item_number >= 39 && item_number <= 45) || 
+        (item_number >= 70 && item_number <= 72)) {
+        return 1; // Non-organic
+    }
+
+    if (voc_ppb_received > VOC_THRESHOLD) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+void receive_classification_thread(void) {
+    uint8_t item_number;
+
+    while(1) {
+        if (k_msgq_get(&classification_msgq, &item_number, K_FOREVER) == 0) { // Receive position message
+            last_processed_class = process_class(item_number);
+            printk("processed class = %d\n", last_processed_class);
+            
+            // Send to display queue
+            k_msgq_put(&position_disp_msgq, &last_processed_class, K_NO_WAIT);
+        }
+    }
+}
+
+void button_thread(void) {
+    bool button_pressed;
+    bool last_state = false;
+
+    if (!device_is_ready(button.port)) {
+        printk("Button device not ready!\n");
+        return;
+    }
+
+    gpio_pin_configure_dt(&button, GPIO_INPUT);
+
+    while (1) {
+        button_pressed = gpio_pin_get_dt(&button);
+
+        if (button_pressed && !last_state) {
+            // Rising edge: button just pressed
+            k_msgq_put(&position_servo_msgq, &last_processed_class, K_NO_WAIT);
+        }
+
+        last_state = button_pressed;
+        k_msleep(50); // debounce delay
+    }
 }

@@ -24,6 +24,9 @@ struct ring_buf ringbuf;
 //create received serial uart message queue
 K_MSGQ_DEFINE(uart_rx_msgq, MSG_SIZE, MSG_Q_SIZE, 4);
 
+//message queue for class id
+K_MSGQ_DEFINE(classification_msgq, sizeof(int), 10, 4);
+
 static bool rx_throttled;
 
 #define PROCESS_THREAD_STACK_SIZE 1024
@@ -77,6 +80,9 @@ void process_data_thread(void *p1, void *p2, void *p3)
                     }
 
                     k_msgq_put(&ibeacon_msgq, &beacon_to_send, K_NO_WAIT);
+
+                    // Send the class id to classifier
+                    k_msgq_put(&classification_msgq, &class_id, K_NO_WAIT);
                 }
 
                 // Get the next token
