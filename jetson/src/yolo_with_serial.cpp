@@ -45,6 +45,7 @@ private:
     int serial_fd;
     std::string port;
     int baudrate;
+    std::mutex serial_mutex;
     
 public:
     SerialComm(const std::string& port_name) 
@@ -111,6 +112,7 @@ public:
     
     bool sendData(const std::string& data)
     {
+        std::lock_guard<std::mutex> lock(serial_mutex);
         if (serial_fd < 0) {
             return false;
         }
@@ -126,6 +128,30 @@ public:
         // Force write to complete
         tcdrain(serial_fd);
         return true;
+    }
+
+    std::string readData()
+    {
+        std::lock_guard<std::mutex> lock(serial_mutex);
+        if (serial_fd < 0) {
+            return "";
+        }
+        
+        char buffer[256];
+        ssize_t bytes_read = read(serial_fd, buffer, sizeof(buffer) - 1);
+        
+        if (bytes_read > 0) {
+            buffer[bytes_read] = '\0';
+            std::string data(buffer);
+            
+            // Remove newlines and carriage returns
+            data.erase(std::remove(data.begin(), data.end(), '\n'), data.end());
+            data.erase(std::remove(data.begin(), data.end(), '\r'), data.end());
+            
+            return data;
+        }
+        
+        return "";
     }
     
     bool isConnected() const
@@ -513,6 +539,25 @@ public:
     }
 };
 
+// Global variable to store NRF input
+std::string nrf_input = "No data";
+std::mutex nrf_input_mutex;
+
+// Function to continuously read from NRF in a separate thread
+void nrfReaderThread(SerialComm* serial) {
+    while (!signal_received) {
+        if (serial && serial->isConnected()) {
+            std::string data = serial->readData();
+            if (!data.empty()) {
+                std::lock_guard<std::mutex> lock(nrf_input_mutex);
+                nrf_input = data;
+                std::cout << "NRF Classification: " << data << std::endl;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Small delay to prevent CPU spinning
+    }
+}
+
 void printUsage()
 {
     std::cout << "Usage: yolov8_video_inference <engine_file> <camera_id or video_file>" << std::endl;
@@ -551,6 +596,12 @@ int main(int argc, char** argv)
             std::cerr << "Failed to initialize serial communication. Continuing without serial..." << std::endl;
             serial.reset(); // Disable serial communication
         }
+    }
+
+    // Start NRF reader thread
+    std::thread nrfThread;
+    if (serial && serial->isConnected()) {
+        nrfThread = std::thread(nrfReaderThread, serial.get());
     }
     
     // Create video capture
@@ -666,7 +717,12 @@ int main(int argc, char** argv)
                         } 
                         message += std::to_string(detectedClasses[i]);
                     }
-                    serial->sendData(message);
+
+                    message += "\n"; 
+
+                    std::cout << "Sending to nRF: '" << message << "'" << std::endl;
+    
+                    bool success = serial->sendData(message);
                 }
             }
             
@@ -675,6 +731,14 @@ int main(int argc, char** argv)
             sprintf(str, "FPS: %.1f", inference.GetNetworkFPS());
             cv::putText(frame, str, cv::Point(10, 60), 
                         cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 255, 0), 2);
+
+
+            {
+                std::lock_guard<std::mutex> lock(nrf_input_mutex);
+                sprintf(str, "NRF Input: %s", nrf_input.c_str());
+                cv::putText(frame, str, cv::Point(10, 90), 
+                            cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 255, 255), 2); // Yellow text
+            }
             
             // Display the frame
             cv::imshow("YOLOv8 Inference", frame);
