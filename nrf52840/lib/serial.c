@@ -10,8 +10,8 @@
 #include <zephyr/usb/usb_device.h>
 #include <zephyr/usb/usbd.h>
 #include <zephyr/logging/log.h>
-
-LOG_MODULE_REGISTER(cdc_acm_echo, LOG_LEVEL_INF);
+#include <stdlib.h>
+#include "bt.h"
 
 const struct device *const uart_dev = DEVICE_DT_GET_ONE(zephyr_cdc_acm_uart);
 
@@ -38,37 +38,52 @@ void process_data_thread(void *p1, void *p2, void *p3)
 
     uint8_t received_message_buffer[MSG_SIZE];
 
-    LOG_INF("Data processing thread started.");
+    printk("Data processing thread started.");
 
     while (true) {
         // Get data from the message queue (blocking call)
         if (k_msgq_get(&uart_rx_msgq, received_message_buffer, K_FOREVER) == 0) {
 
             if (strcmp(received_message_buffer, "NONE") == 0) {
-                LOG_INF("No objects detected (received: NONE).");
+                printk("No objects detected (received: NONE).");
                 continue;
             }
 
             char* token;
             char* parsable_message = received_message_buffer;
 
-            LOG_INF("Detected classes:");
+            printk("Detected classes:");
 
             // Use strtok to split the string
             token = strtok(parsable_message, ",");
 
             while (token != NULL) {
 
-                LOG_INF("- Class: '%s'", token);
+                printk("- Class: '%s'", token);
 
-                //processing!!
-                ////
+                int class_id = atoi(token);
+
+                //need to send classId
+                if (class_id) {
+                    ibeacon_data_t beacon_to_send;
+
+                    beacon_to_send.major = (uint16_t)class_id;
+                    beacon_to_send.minor = 1;
+                    
+                    //drop old ibeacon
+                    if (k_msgq_num_free_get(&ibeacon_msgq) == 0) {
+                        ibeacon_data_t dummy_ibeacon;
+                        k_msgq_get(&ibeacon_msgq, &dummy_ibeacon, K_NO_WAIT);
+                    }
+
+                    k_msgq_put(&ibeacon_msgq, &beacon_to_send, K_NO_WAIT);
+                }
 
                 // Get the next token
                 token = strtok(NULL, ",");
             }
         } else {
-            LOG_ERR("Failed to get data from message queue.");
+            printk("Failed to get data from message queue.");
         }
     }
 }
@@ -93,16 +108,16 @@ static void interrupt_handler(const struct device *dev, void *user_data)
 
             recv_len = uart_fifo_read(dev, buffer, len);
             if (recv_len < 0) {
-                LOG_ERR("Failed to read UART FIFO");
+                printk("Failed to read UART FIFO");
                 recv_len = 0;
             };
 
             rb_len = ring_buf_put(&ringbuf, buffer, recv_len);
             if (rb_len < recv_len) {
-                LOG_ERR("Drop %u bytes", recv_len - rb_len);
+                printk("Drop %u bytes", recv_len - rb_len);
             }
 
-            LOG_DBG("tty fifo -> ringbuf %d bytes", rb_len);
+            printk("tty fifo -> ringbuf %d bytes", rb_len);
 
             if (rb_len) {
                 buffer[rb_len] = '\0';
@@ -114,7 +129,7 @@ static void interrupt_handler(const struct device *dev, void *user_data)
                 }
 
                 if (k_msgq_put(&uart_rx_msgq, buffer, K_NO_WAIT) == 0) {
-                    LOG_DBG("Sent %d bytes to message queue", rb_len);
+                    printk("Sent %d bytes to message queue", rb_len);
                 }
             }
 
@@ -124,23 +139,24 @@ static void interrupt_handler(const struct device *dev, void *user_data)
 
 int serial_init(void)
 {
+    printk("serial made it");
     int ret;
 
     if (!device_is_ready(uart_dev)) {
-        LOG_ERR("CDC ACM device not ready");
+        printk("CDC ACM device not ready");
         return 0;
     }
 
     ret = usb_enable(NULL);
 
     if (ret != 0) {
-        LOG_ERR("Failed to enable USB");
+        printk("Failed to enable USB");
         return 0;
     }
 
     ring_buf_init(&ringbuf, sizeof(ring_buffer), ring_buffer);
 
-    LOG_INF("Wait for DTR");
+    printk("Wait for DTR");
 
     while (true) {
         uint32_t dtr = 0U;
@@ -154,17 +170,17 @@ int serial_init(void)
         }
     }
 
-    LOG_INF("DTR set");
+    printk("DTR set");
 
     /* They are optional, we use them to test the interrupt endpoint */
     ret = uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_DCD, 1);
     if (ret) {
-        LOG_WRN("Failed to set DCD, ret code %d", ret);
+        printk("Failed to set DCD, ret code %d", ret);
     }
 
     ret = uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_DSR, 1);
     if (ret) {
-        LOG_WRN("Failed to set DSR, ret code %d", ret);
+        printk("Failed to set DSR, ret code %d", ret);
     }
 
     /* Wait 100ms for the host to do all settings */
