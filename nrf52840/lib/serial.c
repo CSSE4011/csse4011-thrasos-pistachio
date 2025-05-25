@@ -68,21 +68,10 @@ void process_data_thread(void *p1, void *p2, void *p3)
 
                 //need to send classId
                 if (class_id) {
-                    ibeacon_data_t beacon_to_send;
-
-                    beacon_to_send.major = (uint16_t)class_id;
-                    beacon_to_send.minor = 1;
-                    
-                    //drop old ibeacon
-                    if (k_msgq_num_free_get(&ibeacon_msgq) == 0) {
-                        ibeacon_data_t dummy_ibeacon;
-                        k_msgq_get(&ibeacon_msgq, &dummy_ibeacon, K_NO_WAIT);
-                    }
-
-                    k_msgq_put(&ibeacon_msgq, &beacon_to_send, K_NO_WAIT);
 
                     // Send the class id to classifier
                     k_msgq_put(&classification_msgq, &class_id, K_NO_WAIT);
+                    
                 }
 
                 // Get the next token

@@ -10,7 +10,7 @@
 K_THREAD_STACK_DEFINE(bt_advertiser_thread_stack, BT_STACK_SIZE);
 static struct k_thread bt_advertiser_thread_data;
 
-K_MSGQ_DEFINE(ibeacon_msgq, sizeof(ibeacon_data_t), 20, 4);
+K_MSGQ_DEFINE(ibeacon_msgq, sizeof(u_int8_t), 20, 4);
 
 static const uint8_t BASE_IBEACON_UUID[16] = {
     0x16, 0x15, 0xee, 0x18, 0x6b, 0x01, 0xec, 0x4b,
@@ -26,7 +26,7 @@ void bt_advertiser_thread(void *p1, void *p2, void *p3) {
 
     printk("Bluetooth Advertiser Thread started.\n");
 
-    ibeacon_data_t received_ibeacon_data;
+    u_int8_t received_class;
     int err;
 
     ad[0].type = BT_DATA_FLAGS;
@@ -44,7 +44,7 @@ void bt_advertiser_thread(void *p1, void *p2, void *p3) {
 
     while (1) {
         // Wait indefinitely for new iBeacon data from the message queue
-        if (k_msgq_get(&ibeacon_msgq, &received_ibeacon_data, K_FOREVER) == 0) {
+        if (k_msgq_get(&ibeacon_msgq, &received_class, K_FOREVER) == 0) {
             printk("Advertiser received new iBeacon data from queue.\n");
 
             // 1. Stop current advertising (if any)
@@ -56,8 +56,8 @@ void bt_advertiser_thread(void *p1, void *p2, void *p3) {
             }
 
             memcpy(&current_ibeacon_adv_data[4], BASE_IBEACON_UUID, 16);
-            sys_put_be16(received_ibeacon_data.major, &current_ibeacon_adv_data[20]);
-            sys_put_be16(received_ibeacon_data.minor, &current_ibeacon_adv_data[22]);
+            sys_put_be16(received_class, &current_ibeacon_adv_data[20]);
+            sys_put_be16(1, &current_ibeacon_adv_data[22]);
 
             current_ibeacon_adv_data[24] = 0xC8;
 
@@ -65,8 +65,8 @@ void bt_advertiser_thread(void *p1, void *p2, void *p3) {
             if (err) {
                 printk("Advertising failed to start (err %d)\n", err);
             } else {
-                printk("Advertising updated iBeacon (Major: %u, Minor: %u).\n",
-                       received_ibeacon_data.major, received_ibeacon_data.minor);
+                printk("Advertising updated iBeacon (Major: %u, Minor: %u).\n", received_class);
+                
                 k_sleep(K_MSEC(500)); // Advertise this beacon for 500ms
             }
         } else {
