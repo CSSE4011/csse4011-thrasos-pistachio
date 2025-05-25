@@ -122,7 +122,7 @@ static void interrupt_handler(const struct device *dev, void *user_data)
     }
 }
 
-int main(void)
+int serial_init(void)
 {
     int ret;
 
