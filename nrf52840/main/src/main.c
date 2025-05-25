@@ -8,5 +8,10 @@
 #include <zephyr/device.h>
 
 int main(void) {
-    ultrasonic_setup();
+    printk("here\n");
+
+    //set up serial code
+    serial_init();
+    
+    test();
 }
