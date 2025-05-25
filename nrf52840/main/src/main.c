@@ -7,5 +7,9 @@
 
 int main(void) {
     printk("here\n");
+
+    //set up serial code
+    serial_init();
+    
     test();
 }
