@@ -26,7 +26,7 @@ int main(void) {
         return 0;
     }
     coord_label = lv_label_create(lv_screen_active());
-    lv_obj_align(coord_label, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_align(coord_label, LV_ALIGN_TOP_MID, 0, 0);
 
     lv_timer_handler();
     display_blanking_off(display_dev);
