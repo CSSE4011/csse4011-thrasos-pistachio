@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <cstring>
 #include <sys/ioctl.h>
+#include <thread>
 
 // Logger for TensorRT info/warning/errors
 class Logger : public nvinfer1::ILogger
@@ -46,6 +47,7 @@ private:
     std::string port;
     int baudrate;
     std::mutex serial_mutex;
+    std::string read_buffer;
     
 public:
     SerialComm(const std::string& port_name) 
@@ -98,7 +100,8 @@ public:
         tty.c_cflag &= ~(PARENB | PARODD);      // shut off odd parity
         tty.c_cflag &= ~CSTOPB;
         tty.c_cflag &= ~CRTSCTS;
-        
+
+
         if (tcsetattr(serial_fd, TCSANOW, &tty) != 0) {
             std::cerr << "Error setting serial port attributes: " << strerror(errno) << std::endl;
             close(serial_fd);
@@ -106,59 +109,175 @@ public:
             return false;
         }
         
-        std::cout << "Serial port " << port << " opened successfully at " << baudrate << " baud" << std::endl;
-        return true;
-    }
-    
-    bool sendData(const std::string& data)
-    {
-        std::lock_guard<std::mutex> lock(serial_mutex);
-        if (serial_fd < 0) {
-            return false;
+        // Flush any existing data
+        tcflush(serial_fd, TCIOFLUSH);
+        
+        std::cout << "Serial port " << port << " configured successfully at " << baudrate << " baud" << std::endl;
+        
+        // Wait for NRF to be ready
+        std::cout << "Waiting for NRF to be ready..." << std::endl;
+        auto start_time = std::chrono::steady_clock::now();
+        bool nrf_ready = false;
+        
+        while (!nrf_ready && std::chrono::steady_clock::now() - start_time < std::chrono::seconds(10)) {
+            std::string response = readData();
+            if (response.find("NRF_READY") != std::string::npos) {
+                std::cout << "NRF is ready!" << std::endl;
+                nrf_ready = true;
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         
-        std::string message = data + "\n"; // Add newline for easier parsing on NRF side
-        ssize_t bytes_written = write(serial_fd, message.c_str(), message.length());
-        
-        if (bytes_written < 0) {
-            std::cerr << "Error writing to serial port: " << strerror(errno) << std::endl;
-            return false;
+        if (!nrf_ready) {
+            std::cout << "Warning: NRF ready signal not received, continuing anyway..." << std::endl;
         }
         
-        // Force write to complete
-        tcdrain(serial_fd);
         return true;
     }
 
-    std::string readData()
-    {
-        std::lock_guard<std::mutex> lock(serial_mutex);
-        if (serial_fd < 0) {
-            return "";
+    ssize_t sendData(const std::string& data) {
+        if (serial_fd == -1) {
+            std::cerr << "Error: Serial port not open." << std::endl;
+            return -1;
+        }
+
+        // Add newline character if not already present
+        std::string data_to_send = data;
+        if (data_to_send.empty() || data_to_send.back() != '\n') {
+            data_to_send += '\n'; // Ensure a newline for message parsing on nRF
         }
         
-        char buffer[256];
-        ssize_t bytes_read = read(serial_fd, buffer, sizeof(buffer) - 1);
-        
-        if (bytes_read > 0) {
-            buffer[bytes_read] = '\0';
-            std::string data(buffer);
-            
-            // Remove newlines and carriage returns
-            data.erase(std::remove(data.begin(), data.end(), '\n'), data.end());
-            data.erase(std::remove(data.begin(), data.end(), '\r'), data.end());
-            
-            return data;
+        // Convert to C-style string
+        const char* c_str_data = data_to_send.c_str();
+        size_t total_bytes_to_send = data_to_send.length();
+        size_t bytes_sent = 0;
+
+        std::cout << "Sending to nRF: '" << data_to_send << "'" << std::endl;
+
+        while (bytes_sent < total_bytes_to_send) {
+            ssize_t ret = write(serial_fd, c_str_data + bytes_sent, total_bytes_to_send - bytes_sent);
+
+            if (ret == -1) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    // Buffer full, retry after a short delay
+                    std::cerr << "Warning: Serial write buffer full, retrying..." << std::endl;
+                    usleep(10000); // Sleep for 10ms (10000 microseconds)
+                    continue; // Try sending remaining data again
+                } else {
+                    std::cerr << "Error writing to serial port: " << strerror(errno) << std::endl;
+                    return -1; // Fatal error
+                }
+            } else if (ret == 0) {
+                // Should not happen for write, but handle it
+                std::cerr << "Warning: Write returned 0 bytes, connection might be closed." << std::endl;
+                return -1;
+            } else {
+                bytes_sent += ret; // Successfully sent some bytes
+            }
         }
-        
-        return "";
+
+        return bytes_sent; // Return total bytes successfully sent
     }
+
+    std::string readData() {
+        if (serial_fd == -1) return "";
+        char buf[256];
+        ssize_t num_bytes = read(serial_fd, buf, sizeof(buf) - 1);
     
+        if (num_bytes > 0) {
+            buf[num_bytes] = '\0'; 
+
+            std::cout << "serial read" << buf << std::endl;
+            return std::string(buf);
+        } else if (num_bytes == 0) {
+            return "";
+        } else { // num_bytes == -1
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return "";
+            } else {
+                std::cerr << "Error reading from serial port: " << strerror(errno) << std::endl;
+                return "";
+            }
+        }
+    }
+
     bool isConnected() const
     {
         return serial_fd >= 0;
     }
+    
+    // Clear any buffered data
+    void flush()
+    {
+        std::lock_guard<std::mutex> lock(serial_mutex);
+        if (serial_fd >= 0) {
+            tcflush(serial_fd, TCIOFLUSH);
+        }
+        read_buffer.clear();
+    }
 };
+        
+//         if (tcsetattr(serial_fd, TCSANOW, &tty) != 0) {
+//             std::cerr << "Error setting serial port attributes: " << strerror(errno) << std::endl;
+//             close(serial_fd);
+//             serial_fd = -1;
+//             return false;
+//         }
+        
+//         std::cout << "Serial port " << port << " opened successfully at " << baudrate << " baud" << std::endl;
+//         return true;
+//     }
+    
+//     bool sendData(const std::string& data)
+//     {
+//         std::lock_guard<std::mutex> lock(serial_mutex);
+//         if (serial_fd < 0) {
+//             return false;
+//         }
+        
+//         std::string message = data + "\n"; // Add newline for easier parsing on NRF side
+//         ssize_t bytes_written = write(serial_fd, message.c_str(), message.length());
+        
+//         if (bytes_written < 0) {
+//             std::cerr << "Error writing to serial port: " << strerror(errno) << std::endl;
+//             return false;
+//         }
+        
+//         // Force write to complete
+//         tcdrain(serial_fd);
+//         return true;
+//     }
+
+//     std::string readData()
+//     {
+//         std::lock_guard<std::mutex> lock(serial_mutex);
+//         if (serial_fd < 0) {
+//             return "";
+//         }
+        
+//         char buffer[256];
+//         ssize_t bytes_read = read(serial_fd, buffer, sizeof(buffer) - 1);
+        
+//         if (bytes_read > 0) {
+//             buffer[bytes_read] = '\0';
+//             std::string data(buffer);
+            
+//             // Remove newlines and carriage returns
+//             data.erase(std::remove(data.begin(), data.end(), '\n'), data.end());
+//             data.erase(std::remove(data.begin(), data.end(), '\r'), data.end());
+            
+//             return data;
+//         }
+        
+//         return "";
+//     }
+    
+//     bool isConnected() const
+//     {
+//         return serial_fd >= 0;
+//     }
+// };
 
 // Destroy TensorRT objects
 struct TRTDestroy
