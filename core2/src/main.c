@@ -26,7 +26,7 @@ int main(void) {
         return 0;
     }
     coord_label = lv_label_create(lv_screen_active());
-    lv_obj_align(coord_label, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_align(coord_label, LV_ALIGN_CENTER, 0, 0);
 
     lv_timer_handler();
     display_blanking_off(display_dev);
@@ -35,10 +35,13 @@ int main(void) {
     while (1) {
        if (k_msgq_get(&pos_msgq, &received_coords, K_FOREVER) == 0) {
            // printk("X: %.2f, Y: %.2f", received_coords.x, received_coords.y);
+
+           //can potentially do a fill graph
            
-            sprintf(coord_str, "x: %4.2f, y: %4.2f", received_coords.x, received_coords.y);\
+            sprintf(coord_str, "fill: %4.2f, class: %d", received_coords.fill, received_coords.class);
             lv_label_set_text(coord_label, coord_str);
        }
+
         lv_timer_handler();
        k_sleep(K_MSEC(10));
     }

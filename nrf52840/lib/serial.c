@@ -61,7 +61,7 @@ void send_classification_result(int class_id)
 void send_fill_result(float fill)
 {
     char msg[32];
-    snprintf(msg, sizeof(msg), "FILL:%.2f\n", (double)fill_level);
+    snprintf(msg, sizeof(msg), "FILL:%.2f\n", (double)fill);
     send_to_jetson(msg);
 }
 

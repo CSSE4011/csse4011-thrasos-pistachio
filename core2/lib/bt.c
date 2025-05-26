@@ -16,7 +16,7 @@ K_MSGQ_DEFINE(pos_msgq, sizeof(struct pos_data), 10, 4);
 //btcommon.eir_ad.entry.data[2:16] == 16:15:ee:18:6b:01:ec:4b:96:ad:bc:b9:6d:16:6e:66
 static const uint8_t TARGET_IBEACON_UUID[16] = {
     0x16, 0x15, 0xee, 0x18, 0x6b, 0x01, 0xec, 0x4b,
-    0x96, 0xad, 0xbc, 0xb9, 0x6d, 0x16, 0x6e, 0x66
+    0x96, 0xad, 0xbc, 0xb9, 0x6d, 0x16, 0x6e, 0x69
 };
 
 static int parse_ibeacon_data(const uint8_t *ad, size_t ad_len, struct pos_data *ibeacon) {
@@ -49,11 +49,13 @@ static int parse_ibeacon_data(const uint8_t *ad, size_t ad_len, struct pos_data 
 
                         float scale_factor = 100.0f;
 
-                        uint16_t major_int = sys_get_be16(&ad[i + 20]);
-                        uint16_t minor_int = sys_get_be16(&ad[i + 22]);
+                        uint16_t major_int = sys_get_be16(&ad[i + 20]); // assuming ad[1] is manufacturer data
+                        uint16_t minor_int = sys_get_be16(&ad[i + 22]); // assuming ad[1] is manufacturer data
 
-                        ibeacon->x = (float)major_int / scale_factor;
-                        ibeacon->y = (float)minor_int / scale_factor;
+                        ibeacon->fill = (float)major_int / scale_factor;
+                        
+                        // Decode the int 'class_value'
+                        ibeacon->class = (int)minor_int;
 
                         return 0;
                     }
@@ -82,11 +84,10 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 
 	if (err == 0) {
 		//print to check if we received correct data..
-        double round_x = round(ibeacon.x);
-        double round_y = round(ibeacon.y);
+        double round_fill = round(ibeacon.fill);
 
-        printk("Discovered: x - %.2f, y - %.2f\n",
-            round_x, round_y);
+        printk("Discovered: fill - %.2f, class - %d\n",
+            round_fill, ibeacon.class);
 		
 		//send over the ibeacon data block
         k_msgq_put(&pos_msgq, &ibeacon, K_NO_WAIT);
