@@ -4,6 +4,10 @@
 #include <zephyr/kernel.h>
 #include <zephyr/types.h> // For uint8_t, uint16_t etc.
 
+struct m5data {
+    float fill;
+    int class;
+};
 
 extern struct k_msgq ibeacon_msgq;
 

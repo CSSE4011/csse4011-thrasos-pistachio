@@ -7,6 +7,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <serial.h>
 #include <bt.h>
+#include <ultrasonic.h>
 
 #define BUTTON_NODE DT_ALIAS(sw0)
 static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(BUTTON_NODE, gpios);
@@ -141,6 +142,8 @@ uint8_t process_class(uint8_t item_number) {
 
 void receive_classification_thread(void *p1, void *p2, void *p3) {
     uint8_t item_number;
+    struct m5data sending_data;
+    float fill_level;
 
     while(1) {
         if (k_msgq_get(&classification_msgq, &item_number, K_FOREVER) == 0) { // Receive position message
@@ -152,9 +155,14 @@ void receive_classification_thread(void *p1, void *p2, void *p3) {
             // Send to display queue
             k_msgq_put(&position_disp_msgq, &last_processed_class, K_NO_WAIT);
 
-            //send to bt queue
-            k_msgq_put(&ibeacon_msgq, &last_processed_class, K_NO_WAIT);
+            if (k_msgq_get(&fill_level_msgq, &fill_level, K_FOREVER) == 0) { // Receive position message
+                sending_data.fill = fill_level;
+                send_fill_result(fill_level);
+            }
 
+            sending_data.class = last_processed_class;
+            //send to bt queue
+            k_msgq_put(&ibeacon_msgq, &sending_data, K_NO_WAIT);
         }
     }
 }
