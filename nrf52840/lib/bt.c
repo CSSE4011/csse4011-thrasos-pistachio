@@ -43,6 +43,7 @@ void bt_advertiser_thread(void *p1, void *p2, void *p3) {
     current_ibeacon_adv_data[3] = 0x15; // iBeacon Data Length (21 bytes following)
 
     while (1) {
+        k_msleep(500);
         // Wait indefinitely for new iBeacon data from the message queue
         if (k_msgq_get(&ibeacon_msgq, &received, K_FOREVER) == 0) {
             printk("Advertiser received new iBeacon data from queue.\n");
@@ -86,5 +87,5 @@ void bt_advertiser_thread(void *p1, void *p2, void *p3) {
 void bt_advertiser_init(void) {
     k_thread_create(&bt_advertiser_thread_data, bt_advertiser_thread_stack, BT_STACK_SIZE,
                     bt_advertiser_thread, NULL, NULL, NULL,
-                    K_PRIO_PREEMPT(7), 0, K_NO_WAIT);
+                    K_PRIO_PREEMPT(6), 0, K_NO_WAIT);
 }
