@@ -16,6 +16,9 @@
 #include <cstring>
 #include <sys/ioctl.h>
 #include <thread>
+#include <mqtt/async_client.h>
+#include <mqtt/ssl_options.h>
+
 
 // Logger for TensorRT info/warning/errors
 class Logger : public nvinfer1::ILogger
@@ -658,6 +661,63 @@ public:
     }
 };
 
+struct mqtt_data {
+    std::string topic;
+    std::string payload;
+};
+
+const std::string MQTT_BROKER = "ssl://ve179623.ala.asia-southeast1.emqxsl.com:8883";
+const std::string CLIENT_ID = "jetson_82723640204810479";
+const std::string USERNAME = "jetson";  // EMQX username
+const std::string PASSWORD = "jetson";       // EMQX password
+mqtt::client* mqtt_client = nullptr;
+
+bool init_mqtt() {
+    try {
+        mqtt_client = new mqtt::async_client(MQTT_BROKER, CLIENT_ID);
+        
+        // SSL Options
+        mqtt::ssl_options ssl_opts;
+        ssl_opts.set_trust_store("/etc/ssl/certs/ca-certificates.crt"); // System CA bundle
+        ssl_opts.set_verify(false); // Uncomment if you have certificate issues
+        
+        // Connection options
+        mqtt::connect_options conn_opts;
+        conn_opts.set_user_name(USERNAME);
+        conn_opts.set_password(PASSWORD);
+        conn_opts.set_ssl(ssl_opts);
+        conn_opts.set_keep_alive_interval(500);
+        conn_opts.set_clean_session(true);
+        
+        // Connect
+        auto tok = mqtt_client->connect(conn_opts);
+        tok->wait();
+        
+        std::cout << "Connected to EMQX broker!" << std::endl;
+        return true;
+    }
+    catch (const mqtt::exception& exc) {
+        std::cerr << "MQTT connection failed: " << exc.what() << std::endl;
+        return false;
+    }
+}
+
+void parse_data(string data) {
+    mqtt_data mqtt_msg;
+    mqtt_msg.topic = "/device/jetson/123123123";
+    mqtt_msg.payload = data;
+    
+    send_data(mqtt_msg);
+}
+
+void send_data(mqtt_data data) {  
+    auto msg = mqtt::make_message(data.topic, data.payload);
+    msg->set_qos(1);
+    msg->set_retained(false);
+    mqtt_client->publish(msg);
+}
+
+
 // Global variable to store NRF input
 std::string nrf_input = "No data";
 std::mutex nrf_input_mutex;
@@ -671,6 +731,7 @@ void nrfReaderThread(SerialComm* serial) {
                 std::lock_guard<std::mutex> lock(nrf_input_mutex);
                 nrf_input = data;
                 std::cout << "NRF Classification: " << data << std::endl;
+                parse_data(data);
             }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Small delay to prevent CPU spinning
@@ -716,6 +777,17 @@ int main(int argc, char** argv)
             serial.reset(); // Disable serial communication
         }
     }
+
+    // Setup MQTT connection
+    mqtt_client = new mqtt::async_client(MQTT_BROKER, CLIENT_ID);
+        
+    mqtt::connect_options conn_opts;
+    conn_opts.set_keep_alive_interval(20);
+    conn_opts.set_clean_session(true);
+        
+    // Connect
+    auto tok = mqtt_client->connect(conn_opts);
+    tok->wait();
 
     // Start NRF reader thread
     std::thread nrfThread;
