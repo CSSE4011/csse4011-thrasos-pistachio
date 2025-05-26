@@ -743,13 +743,44 @@ void send_data(mqtt_data data) {
                               data.payload.length(), data.payload.c_str(), 1, false);
 }
 
-void parse_data(std::string data) {
-    // Create JSON payload
-    nlohmann::json json_payload;
-    json_payload["variable"] = "payload";
-    json_payload["value"] = data;
-    json_payload["unit"] = "";
-    json_payload["time"] = std::time(nullptr); 
+void parse_data(std::string data) {    
+    // Parse the data string
+    std::regex fill_regex(R"(FILL:(\d+))");
+    std::regex class_regex(R"(CLASS:(\d+))");
+    
+    std::smatch fill_match, class_match;
+    
+    int fill_value = -1;
+    int class_value = -1;
+    
+    // Extract FILL value
+    if (std::regex_search(data, fill_match, fill_regex)) {
+        fill_value = std::stoi(fill_match[1].str());
+    }
+    
+    // Extract CLASS value
+    if (std::regex_search(data, class_match, class_regex)) {
+        class_value = std::stoi(class_match[1].str());
+    }
+    
+    // Create JSON array with separate variables
+    nlohmann::json json_payload = nlohmann::json::array();
+    
+    // Add fill level data
+    nlohmann::json fill_data;
+    fill_data["variable"] = "fill_level";
+    fill_data["value"] = fill_value;
+    fill_data["unit"] = "%";
+    fill_data["time"] = std::time(nullptr);
+    json_payload.push_back(fill_data);
+    
+    // Add classification data
+    nlohmann::json class_data;
+    class_data["variable"] = "classification";
+    class_data["value"] = class_value;
+    class_data["unit"] = "number";
+    class_data["time"] = std::time(nullptr);
+    json_payload.push_back(class_data);
     
     // Create MQTT message
     mqtt_data mqtt_msg;
