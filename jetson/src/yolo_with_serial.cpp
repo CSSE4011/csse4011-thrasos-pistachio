@@ -735,12 +735,16 @@ bool init_mqtt() {
 }
 
 void send_data(mqtt_data data) {  
-    std::cout << "Publishing MQTT message..." << std::endl;
-    std::cout << "  Topic: " << data.topic << std::endl;
-    std::cout << "  Payload: " << data.payload << std::endl;
+    // Set MQTT properties to indicate JSON content type
+    mosquitto_property *props = nullptr;
+    mosquitto_property_add_string(&props, MQTT_PROP_CONTENT_TYPE, "application/json");
     
-    int rc = mosquitto_publish(mosq, nullptr, data.topic.c_str(), 
-                              data.payload.length(), data.payload.c_str(), 1, false);
+    int rc = mosquitto_publish_v5(mosq, nullptr, data.topic.c_str(), 
+                                 data.payload.length(), data.payload.c_str(), 
+                                 1, false, props);
+    
+    // Clean up properties
+    mosquitto_property_free_all(&props);
 }
 
 void parse_data(std::string data) {    
