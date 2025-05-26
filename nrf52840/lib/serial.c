@@ -61,7 +61,7 @@ void send_classification_result(int class_id)
 void send_fill_result(float fill)
 {
     char msg[32];
-    snprintf(msg, sizeof(msg), "FILL:%.2f\n", (double)fill);
+    snprintf(msg, sizeof(msg), "FILL:%d\n", (int)fill*100);
     send_to_jetson(msg);
 }
 
@@ -74,6 +74,8 @@ void process_data_thread(void *p1, void *p2, void *p3)
     printk("UART Processing Thread started.\n");
 
     while (1) {
+        k_msleep(200);
+        
         k_sem_take(&uart_data_sem, K_FOREVER);
 
         uint8_t byte;

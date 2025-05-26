@@ -18,7 +18,7 @@
 #define BIN_DEPTH_CM 50
 
 #define STACKSIZE 1024
-#define SAMPLE_FILL_LEVEL_PRIORITY 8
+#define SAMPLE_FILL_LEVEL_PRIORITY 7
 
 const struct device *gpio0 = DEVICE_DT_GET(GPIO0_NODE);
 
@@ -68,9 +68,13 @@ void sample_fill_level_thread(void) {
         uint32_t duration_us = measure_echo_duration_us();
         float distance_cm = (duration_us * 0.0343) / 2.0;
         fill_level = distance_cm / BIN_DEPTH_CM;
-    
+        
+        if(k_msgq_num_free_get(&fill_level_msgq) == 0) {
+            float dummy;
+            k_msgq_get(&fill_level_msgq, &dummy, K_NO_WAIT);
+        }
         k_msgq_put(&fill_level_msgq, &fill_level, K_NO_WAIT);
 
-        k_msleep(100);
+        k_msleep(500);
     }
 }

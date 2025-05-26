@@ -132,6 +132,7 @@ uint8_t process_class(uint8_t item_number) {
     }
 
     if (voc_ppb_received > VOC_THRESHOLD) {
+        send_to_jetson("voc reached\n");
         return 0;
     } else {
         return 1;
@@ -156,12 +157,16 @@ void receive_classification_thread(void *p1, void *p2, void *p3) {
             k_msgq_put(&position_disp_msgq, &last_processed_class, K_NO_WAIT);
 
             if (k_msgq_get(&fill_level_msgq, &fill_level, K_FOREVER) == 0) { // Receive position message
-                sending_data.fill = fill_level;
                 send_fill_result(fill_level);
+                sending_data.fill = fill_level;
             }
 
             sending_data.class = last_processed_class;
             //send to bt queue
+            if(k_msgq_num_free_get(&ibeacon_msgq) == 0) {
+                struct m5data dummy;
+                k_msgq_get(&ibeacon_msgq, &dummy, K_NO_WAIT);
+            }
             k_msgq_put(&ibeacon_msgq, &sending_data, K_NO_WAIT);
         }
     }
@@ -187,12 +192,12 @@ void button_thread(void *p1, void *p2, void *p3) {
         }
 
         last_state = button_pressed;
-        k_msleep(50); // debounce delay
+        k_msleep(1000); // debounce delay
     }
 }
 
 void threads_init(void) {
     k_thread_create(&receive_voc_thread_data, stack_1, STACKSIZE, receive_voc_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, K_NO_WAIT);
-    k_thread_create(&button_thread_data, stack_2, STACKSIZE, button_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, K_NO_WAIT);
+    k_thread_create(&button_thread_data, stack_2, STACKSIZE, button_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(6), 0, K_NO_WAIT);
     k_thread_create(&receive_classification_thread_data, stack_3, STACKSIZE, receive_classification_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, K_NO_WAIT);
 }
