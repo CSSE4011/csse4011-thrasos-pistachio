@@ -690,11 +690,6 @@ bool init_mqtt() {
     }
     std::cout << "✓ MQTT client created (ID: " << CLIENT_ID << ")" << std::endl;
     
-    // Set callbacks (optional - for debugging)
-    mosquitto_connect_callback_set(mosq, on_connect);
-    mosquitto_publish_callback_set(mosq, on_publish);
-    mosquitto_disconnect_callback_set(mosq, on_disconnect);
-    
     // Set credentials
     int rc = mosquitto_username_pw_set(mosq, USERNAME.c_str(), PASSWORD.c_str());
     if (rc != MOSQ_ERR_SUCCESS) {
