@@ -684,6 +684,7 @@ bool init_mqtt() {
     
     // Create client
     mosq = mosquitto_new(CLIENT_ID.c_str(), true, nullptr);
+    mosquitto_int_option(mosq, MOSQ_OPT_PROTOCOL_VERSION, MQTT_PROTOCOL_V5);
     if (!mosq) {
         std::cerr << "✗ Failed to create MQTT client" << std::endl;
         return false;
@@ -737,7 +738,7 @@ bool init_mqtt() {
 void send_data(mqtt_data data) {  
     // Set MQTT properties to indicate JSON content type
     mosquitto_property *props = nullptr;
-    mosquitto_property_add_string(&props, MQTT_PROP_CONTENT_TYPE, "application/json");
+    mosquitto_property_add_string(&props, 3, "application/json");
     
     int rc = mosquitto_publish_v5(mosq, nullptr, data.topic.c_str(), 
                                  data.payload.length(), data.payload.c_str(), 
