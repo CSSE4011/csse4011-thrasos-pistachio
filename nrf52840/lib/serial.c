@@ -54,7 +54,14 @@ void send_to_jetson(const char* message)
 void send_classification_result(int class_id)
 {
     char msg[32];
-    snprintf(msg, sizeof(msg), "CLASSIFIED:%d\r\n", class_id);
+    snprintf(msg, sizeof(msg), "CLASS:%d\r\n", class_id);
+    send_to_jetson(msg);
+}
+
+void send_fill_result(float fill)
+{
+    char msg[32];
+    snprintf(msg, sizeof(msg), "FILL:%.2f\n", (double)fill_level);
     send_to_jetson(msg);
 }
 
@@ -98,7 +105,7 @@ void process_data_thread(void *p1, void *p2, void *p3)
 
                     int class_id = atoi(token);
 
-                    send_classification_result(class_id);
+                    //send_classification_result(class_id);
 
                     if (k_msgq_put(&classification_msgq, &class_id, K_NO_WAIT) != 0) {
                         printk("Failed to put class_id %d into classification queue\n", class_id);
@@ -163,7 +170,7 @@ static void interrupt_handler(const struct device *dev, void *user_data)
 
 int serial_init(void)
 {
-    send_to_jetson("NRF:Initializing serial communication\n");
+    //send_to_jetson("NRF:Initializing serial communication\n");
     int ret;
 
     if (!device_is_ready(uart_dev)) {
@@ -206,11 +213,7 @@ int serial_init(void)
 
     /* Wait for host to complete setup */
     k_msleep(100);
-
-    // Create UART reader thread
-    // k_thread_create(&uart_thread_data, uart_thread_stack, UART_THREAD_STACK_SIZE, 
-    //                 uart_reader_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(6), 0, K_NO_WAIT);
-
+    
     // // Create data processing thread
     k_thread_create(&process_thread_data, process_thread_stack, PROCESS_THREAD_STACK_SIZE, 
                     process_data_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, K_NO_WAIT);

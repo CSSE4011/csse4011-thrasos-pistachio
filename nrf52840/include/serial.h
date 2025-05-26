@@ -9,4 +9,8 @@ void process_data_thread(void *p1, void *p2, void *p3);
 
 int serial_init (void);
 
+void send_classification_result(int class_id);
+
+void send_to_jetson(const char* message);
+
 #endif

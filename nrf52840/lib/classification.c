@@ -119,6 +119,7 @@ void receive_voc_thread(void *p1, void *p2, void *p3) {
 }
 
 uint8_t process_class(uint8_t item_number) {
+
     if (item_number >= 46 && item_number <= 55) {
         return 0; // Organic
     }
@@ -129,11 +130,13 @@ uint8_t process_class(uint8_t item_number) {
         return 1; // Non-organic
     }
 
-    // if (voc_ppb_received > VOC_THRESHOLD) {
-    //     return 0;
-    // } else {
-    //     return 1;
-    // }
+    if (voc_ppb_received > VOC_THRESHOLD) {
+        return 0;
+    } else {
+        return 1;
+    }
+
+    // return 1;
 }
 
 void receive_classification_thread(void *p1, void *p2, void *p3) {
@@ -143,6 +146,8 @@ void receive_classification_thread(void *p1, void *p2, void *p3) {
         if (k_msgq_get(&classification_msgq, &item_number, K_FOREVER) == 0) { // Receive position message
             last_processed_class = process_class(item_number);
             printk("processed class = %d\n", last_processed_class);
+
+            send_classification_result(last_processed_class);
             
             // Send to display queue
             k_msgq_put(&position_disp_msgq, &last_processed_class, K_NO_WAIT);
