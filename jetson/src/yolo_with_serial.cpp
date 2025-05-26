@@ -681,7 +681,7 @@ bool init_mqtt() {
     
     // Set credentials
     std::cout << "Setting MQTT credentials (username: jetson)" << std::endl;
-    int rc = mosquitto_username_pw_set(mosq, "jetson", "jetson");
+    rc = mosquitto_tls_set(mosq, "/etc/ssl/certs/ca-certificates.crt", nullptr, nullptr, nullptr, nullptr);
     if (rc != MOSQ_ERR_SUCCESS) {
         std::cerr << "ERROR: Failed to set username/password: " << mosquitto_strerror(rc) << std::endl;
         return false;
