@@ -10,7 +10,7 @@
 K_THREAD_STACK_DEFINE(bt_advertiser_thread_stack, BT_STACK_SIZE);
 static struct k_thread bt_advertiser_thread_data;
 
-K_MSGQ_DEFINE(ibeacon_msgq, sizeof(struct m5data), 20, 4);
+K_MSGQ_DEFINE(ibeacon_msgq, sizeof(struct m5data), 5, 4);
 
 static const uint8_t BASE_IBEACON_UUID[16] = {
     0x16, 0x15, 0xee, 0x18, 0x6b, 0x01, 0xec, 0x4b,
@@ -43,7 +43,7 @@ void bt_advertiser_thread(void *p1, void *p2, void *p3) {
     current_ibeacon_adv_data[3] = 0x15; // iBeacon Data Length (21 bytes following)
 
     while (1) {
-        k_msleep(500);
+        // k_msleep(500);
         // Wait indefinitely for new iBeacon data from the message queue
         if (k_msgq_get(&ibeacon_msgq, &received, K_FOREVER) == 0) {
             printk("Advertiser received new iBeacon data from queue.\n");
