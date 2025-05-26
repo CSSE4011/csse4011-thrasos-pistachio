@@ -16,6 +16,9 @@
 #include <cstring>
 #include <sys/ioctl.h>
 #include <thread>
+#include <mosquitto.h>
+#include <nlohmann/json.hpp>
+
 
 // Logger for TensorRT info/warning/errors
 class Logger : public nvinfer1::ILogger
@@ -658,6 +661,105 @@ public:
     }
 };
 
+const std::string MQTT_BROKER = "ve179623.ala.asia-southeast1.emqxsl.com";
+const int MQTT_PORT = 8883;
+const std::string USERNAME = "jetson";
+const std::string PASSWORD = "jetson";
+const std::string CLIENT_ID = "jetson_82723640204810479";
+const std::string MQTT_TOPIC = "/device/jetson/123123123";
+
+struct mqtt_data {
+    std::string topic;
+    std::string payload;
+};
+
+struct mosquitto *mosq = nullptr;
+bool connected = false;
+
+bool init_mqtt() {
+    std::cout << "Initializing MQTT..." << std::endl;
+    
+    // Initialize library
+    mosquitto_lib_init();
+    
+    // Create client
+    mosq = mosquitto_new(CLIENT_ID.c_str(), true, nullptr);
+    if (!mosq) {
+        std::cerr << "✗ Failed to create MQTT client" << std::endl;
+        return false;
+    }
+    std::cout << "✓ MQTT client created (ID: " << CLIENT_ID << ")" << std::endl;
+    
+    // Set credentials
+    int rc = mosquitto_username_pw_set(mosq, USERNAME.c_str(), PASSWORD.c_str());
+    if (rc != MOSQ_ERR_SUCCESS) {
+        std::cerr << "✗ Failed to set MQTT credentials: " << mosquitto_strerror(rc) << std::endl;
+        return false;
+    }
+    std::cout << "✓ MQTT credentials set" << std::endl;
+    
+    // Set TLS
+    rc = mosquitto_tls_set(mosq, "/etc/ssl/certs/ca-certificates.crt", nullptr, nullptr, nullptr, nullptr);
+    if (rc != MOSQ_ERR_SUCCESS) {
+        std::cout << "⚠ Standard CA path failed, trying insecure mode..." << std::endl;
+        
+        // Try insecure mode
+        rc = mosquitto_tls_set(mosq, nullptr, nullptr, nullptr, nullptr, nullptr);
+        if (rc == MOSQ_ERR_SUCCESS) {
+            mosquitto_tls_insecure_set(mosq, true);
+            std::cout << "✓ TLS setup successful (insecure mode)" << std::endl;
+        } else {
+            std::cerr << "✗ All TLS setup attempts failed: " << mosquitto_strerror(rc) << std::endl;
+            return false;
+        }
+    } else {
+        std::cout << "✓ TLS setup successful (secure mode)" << std::endl;
+    }
+    
+    // Connect to broker
+    std::cout << "Connecting to MQTT broker: " << MQTT_BROKER << ":" << MQTT_PORT << std::endl;
+    rc = mosquitto_connect(mosq, MQTT_BROKER.c_str(), MQTT_PORT, 60);
+    if (rc != MOSQ_ERR_SUCCESS) {
+        std::cerr << "✗ MQTT connection initiation failed: " << mosquitto_strerror(rc) << std::endl;
+        return false;
+    }
+    
+    // Start the network loop
+    mosquitto_loop_start(mosq);
+    
+    // Give it a moment to connect
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    
+    std::cout << "✓ MQTT initialization complete" << std::endl;
+    return true;
+}
+
+void send_data(mqtt_data data) {  
+    std::cout << "Publishing MQTT message..." << std::endl;
+    std::cout << "  Topic: " << data.topic << std::endl;
+    std::cout << "  Payload: " << data.payload << std::endl;
+    
+    int rc = mosquitto_publish(mosq, nullptr, data.topic.c_str(), 
+                              data.payload.length(), data.payload.c_str(), 1, false);
+}
+
+void parse_data(std::string data) {
+    // Create JSON payload
+    nlohmann::json json_payload;
+    json_payload["variable"] = "payload";
+    json_payload["value"] = data;
+    json_payload["unit"] = "";
+    json_payload["time"] = std::time(nullptr); 
+    
+    // Create MQTT message
+    mqtt_data mqtt_msg;
+    mqtt_msg.topic = MQTT_TOPIC;
+    mqtt_msg.payload = json_payload.dump();
+    
+    // Send via MQTT
+    send_data(mqtt_msg);
+}
+
 // Global variable to store NRF input
 std::string nrf_input = "No data";
 std::mutex nrf_input_mutex;
@@ -668,26 +770,31 @@ void nrfReaderThread(SerialComm* serial) {
         if (serial && serial->isConnected()) {
             std::string data = serial->readData();
             if (!data.empty()) {
-                std::lock_guard<std::mutex> lock(nrf_input_mutex);
-                nrf_input = data;
+                {
+                    std::lock_guard<std::mutex> lock(nrf_input_mutex);
+                    nrf_input = data;
+                }
                 std::cout << "NRF Classification: " << data << std::endl;
+                parse_data(data);
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Small delay to prevent CPU spinning
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
 void printUsage()
 {
-    std::cout << "Usage: yolov8_video_inference <engine_file> <camera_id or video_file>" << std::endl;
+    std::cout << "Usage: yolov8_video_inference <engine_file> <camera_id or video_file> [serial_port]" << std::endl;
     std::cout << "  engine_file: Path to TensorRT engine file (e.g., yolov8n.engine)" << std::endl;
     std::cout << "  camera_id: Camera device ID (e.g., 0 for default camera)" << std::endl;
     std::cout << "  video_file: Path to video file (if using a file instead of camera)" << std::endl;
+    std::cout << "  serial_port: Serial port for NRF communication (optional)" << std::endl;
     std::cout << std::endl;
     std::cout << "Examples:" << std::endl;
-    std::cout << "  yolov8_video_inference yolov8n.engine 0" << std::endl;
+    std::cout << "  yolov8_video_inference yolov8n.engine 0 /dev/ttyUSB0" << std::endl;
     std::cout << "  yolov8_video_inference yolov8n.engine /path/to/video.mp4" << std::endl;
 }
+
 
 int main(int argc, char** argv)
 {
@@ -716,6 +823,9 @@ int main(int argc, char** argv)
             serial.reset(); // Disable serial communication
         }
     }
+
+    // Setup MQTT connection
+    init_mqtt();
 
     // Start NRF reader thread
     std::thread nrfThread;
@@ -765,12 +875,12 @@ int main(int argc, char** argv)
         while (!signal_received) {
             // Capture next frame
             if (!cap.read(frame)) {
-                std::cout << "End of video stream" << std::endl;
+                // std::cout << "End of video stream" << std::endl;
                 break;
             }
             
             if (frame.empty()) {
-                std::cerr << "Empty frame received" << std::endl;
+                // std::cerr << "Empty frame received" << std::endl;
                 continue;
             }
             
