@@ -10,7 +10,7 @@
 K_THREAD_STACK_DEFINE(bt_advertiser_thread_stack, BT_STACK_SIZE);
 static struct k_thread bt_advertiser_thread_data;
 
-K_MSGQ_DEFINE(ibeacon_msgq, sizeof(u_int8_t), 20, 4);
+K_MSGQ_DEFINE(ibeacon_msgq, sizeof(uint8_t), 20, 4);
 
 static const uint8_t BASE_IBEACON_UUID[16] = {
     0x16, 0x15, 0xee, 0x18, 0x6b, 0x01, 0xec, 0x4b,
@@ -26,7 +26,7 @@ void bt_advertiser_thread(void *p1, void *p2, void *p3) {
 
     printk("Bluetooth Advertiser Thread started.\n");
 
-    u_int8_t received_class;
+    uint8_t received_class;
     int err;
 
     ad[0].type = BT_DATA_FLAGS;
@@ -66,7 +66,7 @@ void bt_advertiser_thread(void *p1, void *p2, void *p3) {
                 printk("Advertising failed to start (err %d)\n", err);
             } else {
                 printk("Advertising updated iBeacon (Major: %u, Minor: %u).\n", received_class);
-                
+
                 k_sleep(K_MSEC(500)); // Advertise this beacon for 500ms
             }
         } else {

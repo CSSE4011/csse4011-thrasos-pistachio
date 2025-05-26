@@ -29,6 +29,8 @@ int main(void) {
      printk("Bluetooth initialized\n");
 
      bt_advertiser_init();
+
+     threads_init();
     
     // test();
 

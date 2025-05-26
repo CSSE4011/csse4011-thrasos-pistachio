@@ -6,6 +6,7 @@
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/drivers/gpio.h>
 #include <serial.h>
+#include <bt.h>
 
 #define BUTTON_NODE DT_ALIAS(sw0)
 static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(BUTTON_NODE, gpios);
@@ -18,18 +19,23 @@ K_MSGQ_DEFINE(position_disp_msgq, sizeof(uint8_t), 10, 4);
 #define IBEACON_DATA_LEN        0x15
 
 #define STACKSIZE 1024
+K_THREAD_STACK_DEFINE(stack_1, STACKSIZE);
+K_THREAD_STACK_DEFINE(stack_2, STACKSIZE);
+K_THREAD_STACK_DEFINE(stack_3, STACKSIZE);
 
 #define VOC_THRESHOLD 50.0f
 
 volatile float voc_ppb_received = 0.0f;
 volatile uint8_t last_processed_class = 0;
 
-void receive_voc_thread(void);
-void button_thread(void);
-void receive_classification_thread(void);
-K_THREAD_DEFINE(voc_receive_tid, STACKSIZE, receive_voc_thread, NULL, NULL, NULL, 5, 0, 0);
-K_THREAD_DEFINE(button_tid, STACKSIZE, button_thread, NULL, NULL, NULL, 6, 0, 0);
-K_THREAD_DEFINE(receive_classification_tid, STACKSIZE, receive_classification_thread, NULL, NULL, NULL, 6, 0, 0);
+void receive_voc_thread(void *p1, void *p2, void *p3);
+void button_thread(void *p1, void *p2, void *p3);
+void receive_classification_thread(void *p1, void *p2, void *p3);
+
+static struct k_thread receive_voc_thread_data;
+static struct k_thread button_thread_data;
+static struct k_thread receive_classification_thread_data;
+
 
 static const uint8_t TARGET_UUID[16] = {
     0x16, 0x15, 0xee, 0x18, 0x6b, 0x01, 0xec, 0x4b,
@@ -90,7 +96,7 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 
 }
 
-void receive_voc_thread(void) {
+void receive_voc_thread(void *p1, void *p2, void *p3) {
     struct bt_le_scan_param scan_param = {
 		// .type       = BT_LE_SCAN_TYPE_PASSIVE,
         .type       = BT_LE_SCAN_TYPE_ACTIVE,
@@ -123,14 +129,14 @@ uint8_t process_class(uint8_t item_number) {
         return 1; // Non-organic
     }
 
-    if (voc_ppb_received > VOC_THRESHOLD) {
-        return 0;
-    } else {
-        return 1;
-    }
+    // if (voc_ppb_received > VOC_THRESHOLD) {
+    //     return 0;
+    // } else {
+    //     return 1;
+    // }
 }
 
-void receive_classification_thread(void) {
+void receive_classification_thread(void *p1, void *p2, void *p3) {
     uint8_t item_number;
 
     while(1) {
@@ -140,11 +146,15 @@ void receive_classification_thread(void) {
             
             // Send to display queue
             k_msgq_put(&position_disp_msgq, &last_processed_class, K_NO_WAIT);
+
+            //send to bt queue
+            k_msgq_put(&ibeacon_msgq, &last_processed_class, K_NO_WAIT);
+
         }
     }
 }
 
-void button_thread(void) {
+void button_thread(void *p1, void *p2, void *p3) {
     bool button_pressed;
     bool last_state = false;
 
@@ -166,4 +176,10 @@ void button_thread(void) {
         last_state = button_pressed;
         k_msleep(50); // debounce delay
     }
+}
+
+void threads_init(void) {
+    k_thread_create(&receive_voc_thread_data, stack_1, STACKSIZE, receive_voc_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, K_NO_WAIT);
+    k_thread_create(&button_thread_data, stack_2, STACKSIZE, button_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, K_NO_WAIT);
+    k_thread_create(&receive_classification_thread_data, stack_3, STACKSIZE, receive_classification_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, K_NO_WAIT);
 }

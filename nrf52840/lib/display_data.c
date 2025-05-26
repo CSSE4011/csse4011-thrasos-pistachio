@@ -22,7 +22,7 @@ void receive_class_thread(void) {
 
     while(1) {
         if (k_msgq_get(&position_disp_msgq, &pos, K_FOREVER) == 0) { // Receive position message
-            printk("position = %d\n", pos);
+            //printk("position = %d\n", pos);
         }
     }
 }
@@ -32,7 +32,7 @@ void receive_fill_level_thread(void) {
 
     while(1) {
         if (k_msgq_get(&fill_level_msgq, &fill_level, K_FOREVER) == 0) { // Receive position message
-            printk("fill level = %.2f\n", (double)fill_level);
+            //printk("fill level = %.2f\n", (double)fill_level);
         }
     }
 }
