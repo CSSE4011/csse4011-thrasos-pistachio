@@ -789,10 +789,16 @@ void parse_data(std::string data) {
     fill_data["variable"] = "fill_level";
     fill_data["value"] = fill_value;
     fill_data["unit"] = "%";
-    fill_data["variable"] = "classification";
-    fill_data["value"] = class_value;
-    fill_data["unit"] = "number";
+    fill_data["time"] = std::time(nullptr);
     json_payload.push_back(fill_data);
+    
+    // Add classification data
+    nlohmann::json class_data;
+    class_data["variable"] = "classification";
+    class_data["value"] = class_value;
+    class_data["unit"] = "number";
+    class_data["time"] = std::time(nullptr);
+    json_payload.push_back(class_data);
     
     // Create MQTT message
     mqtt_data mqtt_msg;
