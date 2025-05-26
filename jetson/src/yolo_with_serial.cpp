@@ -17,6 +17,7 @@
 #include <sys/ioctl.h>
 #include <thread>
 #include <mosquitto.h>
+#include <nlohmann/json.hpp>
 
 
 // Logger for TensorRT info/warning/errors
@@ -675,30 +676,6 @@ struct mqtt_data {
 struct mosquitto *mosq = nullptr;
 bool connected = false;
 
-// Callback functions (optional - for debugging)
-void on_connect(struct mosquitto *mosq, void *userdata, int result) {
-    if (result == 0) {
-        std::cout << "✓ MQTT Connected successfully!" << std::endl;
-        connected = true;
-    } else {
-        std::cout << "✗ MQTT Connection failed with code: " << result << std::endl;
-        connected = false;
-    }
-}
-
-void on_publish(struct mosquitto *mosq, void *userdata, int mid) {
-    std::cout << "✓ MQTT Message published (ID: " << mid << ")" << std::endl;
-}
-
-void on_disconnect(struct mosquitto *mosq, void *userdata, int rc) {
-    if (rc == 0) {
-        std::cout << "✓ MQTT Clean disconnection" << std::endl;
-    } else {
-        std::cout << "✗ MQTT Unexpected disconnection (code: " << rc << ")" << std::endl;
-    }
-    connected = false;
-}
-
 bool init_mqtt() {
     std::cout << "Initializing MQTT..." << std::endl;
     
@@ -762,38 +739,30 @@ bool init_mqtt() {
     return true;
 }
 
-void send_data(mqtt_data data) {
-    if (!mosq) {
-        std::cerr << "ERROR: MQTT client not initialized" << std::endl;
-        return;
-    }
-    
+void send_data(mqtt_data data) {  
     std::cout << "Publishing MQTT message..." << std::endl;
     std::cout << "  Topic: " << data.topic << std::endl;
     std::cout << "  Payload: " << data.payload << std::endl;
     
     int rc = mosquitto_publish(mosq, nullptr, data.topic.c_str(), 
                               data.payload.length(), data.payload.c_str(), 1, false);
-    
-    if (rc == MOSQ_ERR_SUCCESS) {
-        std::cout << "✓ MQTT publish command sent successfully" << std::endl;
-    } else {
-        std::cerr << "✗ MQTT publish failed: " << mosquitto_strerror(rc) << std::endl;
-    }
 }
 
 void parse_data(std::string data) {
-    std::cout << "\n=== PROCESSING NRF DATA ===" << std::endl;
-    std::cout << "Received: '" << data << "'" << std::endl;
+    // Create JSON payload
+    nlohmann::json json_payload;
+    json_payload["variable"] = "payload";
+    json_payload["value"] = data;
+    json_payload["unit"] = "";
+    json_payload["time"] = std::time(nullptr); 
     
     // Create MQTT message
     mqtt_data mqtt_msg;
     mqtt_msg.topic = MQTT_TOPIC;
-    mqtt_msg.payload = data;
+    mqtt_msg.payload = json_payload.dump();
     
     // Send via MQTT
     send_data(mqtt_msg);
-    std::cout << "=== DATA PROCESSING COMPLETE ===\n" << std::endl;
 }
 
 // Global variable to store NRF input
