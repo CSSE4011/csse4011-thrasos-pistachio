@@ -668,38 +668,115 @@ struct mqtt_data {
 struct mosquitto *mosq = nullptr;
 
 bool init_mqtt() {
+    std::cout << "Initializing MQTT library..." << std::endl;
     mosquitto_lib_init();
     
+    std::cout << "Creating MQTT client with ID: jetson_82723640204810479" << std::endl;
     mosq = mosquitto_new("jetson_82723640204810479", true, nullptr);
     if (!mosq) {
-        std::cerr << "Failed to create mosquitto client" << std::endl;
+        std::cerr << "ERROR: Failed to create mosquitto client" << std::endl;
+        return false;
+    }
+    std::cout << "MQTT client created successfully" << std::endl;
+    
+    // Set credentials
+    std::cout << "Setting MQTT credentials (username: jetson)" << std::endl;
+    int rc = mosquitto_username_pw_set(mosq, "jetson", "jetson");
+    if (rc != MOSQ_ERR_SUCCESS) {
+        std::cerr << "ERROR: Failed to set username/password: " << mosquitto_strerror(rc) << std::endl;
+        return false;
+    }
+    std::cout << "Credentials set successfully" << std::endl;
+    
+    // Set TLS
+    std::cout << "Setting up TLS/SSL..." << std::endl;
+    rc = mosquitto_tls_set(mosq, nullptr, nullptr, nullptr, nullptr, nullptr);
+    if (rc != MOSQ_ERR_SUCCESS) {
+        std::cerr << "ERROR: TLS setup failed: " << mosquitto_strerror(rc) << std::endl;
+        return false;
+    }
+    std::cout << "TLS setup successful" << std::endl;
+    
+    // Connect
+    std::cout << "Connecting to MQTT broker: ve179623.ala.asia-southeast1.emqxsl.com:8883" << std::endl;
+    rc = mosquitto_connect(mosq, "ve179623.ala.asia-southeast1.emqxsl.com", 8883, 60);
+    if (rc != MOSQ_ERR_SUCCESS) {
+        std::cerr << "ERROR: Connection failed: " << mosquitto_strerror(rc) << std::endl;
+        std::cerr << "Error code: " << rc << std::endl;
         return false;
     }
     
-    // Set credentials
-    mosquitto_username_pw_set(mosq, "jetson", "jetson");
+    std::cout << "MQTT connection initiated successfully!" << std::endl;
+    std::cout << "Waiting for connection to establish..." << std::endl;
     
-    // Set TLS
-    int rc = mosquitto_tls_set(mosq, nullptr, nullptr, nullptr, nullptr, nullptr);
+    // Give it a moment to connect
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     
-    // Connect
-    rc = mosquitto_connect(mosq, "ve179623.ala.asia-southeast1.emqxsl.com", 8883, 60);  
     return true;
 }
 
 void send_data(mqtt_data data) {
-    if (!mosq) return;
+    if (!mosq) {
+        std::cerr << "ERROR: MQTT client not initialized, cannot send data" << std::endl;
+        return;
+    }
+    
+    std::cout << "Attempting to publish message..." << std::endl;
+    std::cout << "  Topic: " << data.topic << std::endl;
+    std::cout << "  Payload: " << data.payload << std::endl;
+    std::cout << "  Payload length: " << data.payload.length() << " bytes" << std::endl;
+    
     int rc = mosquitto_publish(mosq, nullptr, data.topic.c_str(), 
                               data.payload.length(), data.payload.c_str(), 1, false);
+    
+    if (rc == MOSQ_ERR_SUCCESS) {
+        std::cout << "SUCCESS: Message published successfully!" << std::endl;
+    } else {
+        std::cerr << "ERROR: Failed to publish message: " << mosquitto_strerror(rc) << std::endl;
+        std::cerr << "Error code: " << rc << std::endl;
+        
+        // Additional debugging info
+        switch(rc) {
+            case MOSQ_ERR_INVAL:
+                std::cerr << "  -> Invalid input parameters" << std::endl;
+                break;
+            case MOSQ_ERR_NOMEM:
+                std::cerr << "  -> Out of memory" << std::endl;
+                break;
+            case MOSQ_ERR_NO_CONN:
+                std::cerr << "  -> Client not connected to broker" << std::endl;
+                break;
+            case MOSQ_ERR_PROTOCOL:
+                std::cerr << "  -> Protocol error" << std::endl;
+                break;
+            case MOSQ_ERR_PAYLOAD_SIZE:
+                std::cerr << "  -> Payload too large" << std::endl;
+                break;
+            default:
+                std::cerr << "  -> Unknown error" << std::endl;
+                break;
+        }
+    }
 }
 
 void parse_data(std::string data) {
+    std::cout << "\n=== PARSE_DATA CALLED ===" << std::endl;
+    std::cout << "Received NRF data: '" << data << "'" << std::endl;
+    std::cout << "Data length: " << data.length() << " characters" << std::endl;
+    
     mqtt_data mqtt_msg;
     mqtt_msg.topic = "/device/jetson/123123123";
     mqtt_msg.payload = data;
     
+    std::cout << "Prepared MQTT message:" << std::endl;
+    std::cout << "  Topic: " << mqtt_msg.topic << std::endl;
+    std::cout << "  Payload: " << mqtt_msg.payload << std::endl;
+    
+    std::cout << "Calling send_data()..." << std::endl;
     send_data(mqtt_msg);
+    std::cout << "=== PARSE_DATA FINISHED ===\n" << std::endl;
 }
+
 // Global variable to store NRF input
 std::string nrf_input = "No data";
 std::mutex nrf_input_mutex;
@@ -811,12 +888,12 @@ int main(int argc, char** argv)
         while (!signal_received) {
             // Capture next frame
             if (!cap.read(frame)) {
-                std::cout << "End of video stream" << std::endl;
+                // std::cout << "End of video stream" << std::endl;
                 break;
             }
             
             if (frame.empty()) {
-                std::cerr << "Empty frame received" << std::endl;
+                // std::cerr << "Empty frame received" << std::endl;
                 continue;
             }
             
