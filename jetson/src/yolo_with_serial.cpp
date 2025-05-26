@@ -744,23 +744,41 @@ void send_data(mqtt_data data) {
 }
 
 void parse_data(std::string data) {    
-    // Parse the data string
-    std::regex fill_regex(R"(FILL:(\d+))");
-    std::regex class_regex(R"(CLASS:(\d+))");
-    
-    std::smatch fill_match, class_match;
-    
     int fill_value = -1;
     int class_value = -1;
     
-    // Extract FILL value
-    if (std::regex_search(data, fill_match, fill_regex)) {
-        fill_value = std::stoi(fill_match[1].str());
+    // Find FILL value
+    size_t fill_pos = data.find("FILL:");
+    if (fill_pos != std::string::npos) {
+        size_t start = fill_pos + 5; // Skip "FILL:"
+        size_t end = start;
+        
+        // Find end of number
+        while (end < data.length() && std::isdigit(data[end])) {
+            end++;
+        }
+        
+        if (end > start) {
+            std::string fill_str = data.substr(start, end - start);
+            fill_value = std::stoi(fill_str);
+        }
     }
     
-    // Extract CLASS value
-    if (std::regex_search(data, class_match, class_regex)) {
-        class_value = std::stoi(class_match[1].str());
+    // Find CLASS value
+    size_t class_pos = data.find("CLASS:");
+    if (class_pos != std::string::npos) {
+        size_t start = class_pos + 6; // Skip "CLASS:"
+        size_t end = start;
+        
+        // Find end of number
+        while (end < data.length() && std::isdigit(data[end])) {
+            end++;
+        }
+        
+        if (end > start) {
+            std::string class_str = data.substr(start, end - start);
+            class_value = std::stoi(class_str);
+        }
     }
     
     // Create JSON array with separate variables
@@ -786,6 +804,8 @@ void parse_data(std::string data) {
     mqtt_data mqtt_msg;
     mqtt_msg.topic = MQTT_TOPIC;
     mqtt_msg.payload = json_payload.dump();
+    
+    std::cout << "Parsed - Fill: " << fill_value << "%, Class: " << class_value << std::endl;
     
     // Send via MQTT
     send_data(mqtt_msg);
