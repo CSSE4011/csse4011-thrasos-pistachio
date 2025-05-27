@@ -58,10 +58,10 @@ void send_classification_result(int class_id)
     send_to_jetson(msg);
 }
 
-void send_fill_result(float fill)
+void send_fill_result(int fill)
 {
     char msg[32];
-    snprintf(msg, sizeof(msg), "FILL:%d\n", (int)fill*100);
+    snprintf(msg, sizeof(msg), "FILL:%d\r\n", fill);
     send_to_jetson(msg);
 }
 
@@ -75,7 +75,7 @@ void process_data_thread(void *p1, void *p2, void *p3)
 
     while (1) {
         k_msleep(200);
-        
+
         k_sem_take(&uart_data_sem, K_FOREVER);
 
         uint8_t byte;

@@ -155,9 +155,13 @@ void receive_classification_thread(void *p1, void *p2, void *p3) {
             
             // Send to display queue
             k_msgq_put(&position_disp_msgq, &last_processed_class, K_NO_WAIT);
+            k_msgq_put(&position_servo_msgq, &last_processed_class, K_NO_WAIT);
 
             if (k_msgq_get(&fill_level_msgq, &fill_level, K_FOREVER) == 0) { // Receive position message
-                send_fill_result(fill_level);
+                //float fill = fill_level;
+                int fill = (int) (fill_level * 100);
+                send_fill_result(fill);
+
                 sending_data.fill = fill_level;
             }
 
@@ -172,32 +176,32 @@ void receive_classification_thread(void *p1, void *p2, void *p3) {
     }
 }
 
-void button_thread(void *p1, void *p2, void *p3) {
-    bool button_pressed;
-    bool last_state = false;
+// void button_thread(void *p1, void *p2, void *p3) {
+//     bool button_pressed;
+//     bool last_state = false;
 
-    if (!device_is_ready(button.port)) {
-        printk("Button device not ready!\n");
-        return;
-    }
+//     if (!device_is_ready(button.port)) {
+//         printk("Button device not ready!\n");
+//         return;
+//     }
 
-    gpio_pin_configure_dt(&button, GPIO_INPUT);
+//     gpio_pin_configure_dt(&button, GPIO_INPUT);
 
-    while (1) {
-        button_pressed = gpio_pin_get_dt(&button);
+//     while (1) {
+//         button_pressed = gpio_pin_get_dt(&button);
 
-        if (button_pressed && !last_state) {
-            // Rising edge: button just pressed
-            k_msgq_put(&position_servo_msgq, &last_processed_class, K_NO_WAIT);
-        }
+//         if (button_pressed && !last_state) {
+//             // Rising edge: button just pressed
+//             k_msgq_put(&position_servo_msgq, &last_processed_class, K_NO_WAIT);
+//         }
 
-        last_state = button_pressed;
-        k_msleep(1000); // debounce delay
-    }
-}
+//         last_state = button_pressed;
+//         k_msleep(1000); // debounce delay
+//     }
+// }
 
 void threads_init(void) {
     k_thread_create(&receive_voc_thread_data, stack_1, STACKSIZE, receive_voc_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, K_NO_WAIT);
-    k_thread_create(&button_thread_data, stack_2, STACKSIZE, button_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(6), 0, K_NO_WAIT);
+    //k_thread_create(&button_thread_data, stack_2, STACKSIZE, button_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(6), 0, K_NO_WAIT);
     k_thread_create(&receive_classification_thread_data, stack_3, STACKSIZE, receive_classification_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, K_NO_WAIT);
 }

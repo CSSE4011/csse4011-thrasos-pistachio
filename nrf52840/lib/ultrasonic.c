@@ -15,7 +15,7 @@
 #define ECHO_PIN 15
 #define GPIO0_NODE DT_NODELABEL(gpio0)
 
-#define BIN_DEPTH_CM 50
+#define BIN_DEPTH_CM 20
 
 #define STACKSIZE 1024
 #define SAMPLE_FILL_LEVEL_PRIORITY 7
@@ -67,7 +67,11 @@ void sample_fill_level_thread(void) {
         trigger_pulse();
         uint32_t duration_us = measure_echo_duration_us();
         float distance_cm = (duration_us * 0.0343) / 2.0;
-        fill_level = distance_cm / BIN_DEPTH_CM;
+        if ((BIN_DEPTH_CM - distance_cm) < 0) {
+            distance_cm = 0;
+        } else {
+            fill_level = (BIN_DEPTH_CM - distance_cm) / BIN_DEPTH_CM;
+        }
         
         if(k_msgq_num_free_get(&fill_level_msgq) == 0) {
             float dummy;

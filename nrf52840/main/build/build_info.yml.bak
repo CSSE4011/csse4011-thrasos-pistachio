@@ -1,0 +1,4 @@
+west:
+  command: /Users/wendi/zephyr_install/env/bin/west build -b nrf52840dk/nrf52840 --pristine
+  topdir: /Users/wendi/csse4011/repo
+  version: 1.3.0
