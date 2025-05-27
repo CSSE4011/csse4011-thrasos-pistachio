@@ -797,7 +797,7 @@ bool init_mqtt() {
 void send_data(mqtt_data data) {  
     // Set MQTT properties to indicate JSON content type
     mosquitto_property *props = nullptr;
-    mosquitto_property_add_string(&props, 3, "application/json");
+    mosquitto_property_add_string(&props, 42, "application/json");
     
     int rc = mosquitto_publish_v5(mosq, nullptr, data.topic.c_str(), 
                                  data.payload.length(), data.payload.c_str(), 
