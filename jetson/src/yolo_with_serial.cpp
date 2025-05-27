@@ -19,6 +19,12 @@
 #include <mosquitto.h>
 #include <nlohmann/json.hpp>
 
+#include <atomic>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <cstring>
 
 // Logger for TensorRT info/warning/errors
 class Logger : public nvinfer1::ILogger
@@ -51,6 +57,11 @@ private:
     int baudrate;
     std::mutex serial_mutex;
     std::string read_buffer;
+
+    const std::string PIPE_NAME = "./ultra_commands";
+    std::atomic<bool> pipe_running{false};
+    std::thread pipe_thread;
+    std::atomic<bool> should_stop_pipe{false};
     
 public:
     SerialComm(const std::string& port_name) 
@@ -139,6 +150,111 @@ public:
         return true;
     }
 
+    void startCommandInterface() {
+        unlink(PIPE_NAME.c_str());
+
+        // Create named pipe
+        if (mkfifo(PIPE_NAME.c_str(), 0666) == -1) {
+            if (errno != EEXIST) {
+                std::cerr << "Error creating named pipe: " << strerror(errno) << std::endl;
+                return;
+            }
+        }
+        
+        std::cout << "\n=== Command Interface Ready ===" << std::endl;
+        std::cout << "Send commands from another terminal with:" << std::endl;
+        std::cout << "  echo 'ultra on' > " << PIPE_NAME << std::endl;
+        std::cout << "  echo 'ultra off' > " << PIPE_NAME << std::endl;
+
+        should_stop_pipe = false;
+        pipe_running = true;
+        
+        // Start pipe thread with proper lifetime management
+        pipe_thread = std::thread([this]() {
+            this->pipeReaderLoop();
+        });
+    }
+
+private:
+    void pipeReaderLoop() {
+        while (!should_stop_pipe) {
+            // Open pipe with non-blocking mode first to check if we should continue
+            int pipe_fd = open(PIPE_NAME.c_str(), O_RDONLY | O_NONBLOCK);
+            if (pipe_fd == -1) {
+                if (errno == ENXIO) {
+                    // No writer yet, this is normal - wait a bit and try again
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    continue;
+                } else {
+                    if (!should_stop_pipe) { // Only show error if we're still supposed to be running
+                        std::cerr << "Error opening named pipe: " << strerror(errno) << std::endl;
+                    }
+                    break;
+                }
+            }
+            
+            // Switch to blocking mode for reading
+            int flags = fcntl(pipe_fd, F_GETFL);
+            if (flags != -1) {
+                fcntl(pipe_fd, F_SETFL, flags & ~O_NONBLOCK);
+            }
+            
+            char buffer[256];
+            ssize_t bytes_read = read(pipe_fd, buffer, sizeof(buffer) - 1);
+            
+            if (bytes_read > 0) {
+                buffer[bytes_read] = '\0';
+                std::string command(buffer);
+                
+                // Remove trailing whitespace/newlines
+                command.erase(command.find_last_not_of(" \t\n\r\f\v") + 1);
+                
+                if (!command.empty()) {
+                    std::cout << "\n[PIPE-CMD] Received: '" << command << "'" << std::endl;
+
+                    sendData(command);
+                }
+            } else if (bytes_read == 0) {
+                // Writer closed, this is normal - wait for next writer
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            } else {
+                // Error reading
+                if (errno != EAGAIN && errno != EWOULDBLOCK && !should_stop_pipe) {
+                    std::cerr << "[PIPE-CMD] Error reading from pipe: " << strerror(errno) << std::endl;
+                }
+            }
+            
+            close(pipe_fd);
+        }
+        
+        pipe_running = false;
+        std::cout << "[PIPE-CMD] Command interface thread stopped" << std::endl;
+    }
+
+public:
+    void stop() {
+        // Signal pipe thread to stop
+        should_stop_pipe = true;
+        
+        // Wait for pipe thread to finish (with timeout)
+        if (pipe_thread.joinable()) {
+            // Create a dummy write to unblock the pipe if it's waiting
+            int temp_fd = open(PIPE_NAME.c_str(), O_WRONLY | O_NONBLOCK);
+            if (temp_fd != -1) {
+                write(temp_fd, "\n", 1);
+                close(temp_fd);
+            }
+            
+            // Wait for thread to finish
+            pipe_thread.join();
+        }
+        
+        // Clean up pipe file
+        unlink(PIPE_NAME.c_str());
+        
+        std::cout << "[PIPE-CMD] Command interface stopped and cleaned up" << std::endl;
+    }
+
     ssize_t sendData(const std::string& data) {
         if (serial_fd == -1) {
             std::cerr << "Error: Serial port not open." << std::endl;
@@ -209,6 +325,10 @@ public:
     {
         return serial_fd >= 0;
     }
+
+    bool isPipeRunning() const {
+        return pipe_running;
+    }
     
     // Clear any buffered data
     void flush()
@@ -220,67 +340,6 @@ public:
         read_buffer.clear();
     }
 };
-        
-//         if (tcsetattr(serial_fd, TCSANOW, &tty) != 0) {
-//             std::cerr << "Error setting serial port attributes: " << strerror(errno) << std::endl;
-//             close(serial_fd);
-//             serial_fd = -1;
-//             return false;
-//         }
-        
-//         std::cout << "Serial port " << port << " opened successfully at " << baudrate << " baud" << std::endl;
-//         return true;
-//     }
-    
-//     bool sendData(const std::string& data)
-//     {
-//         std::lock_guard<std::mutex> lock(serial_mutex);
-//         if (serial_fd < 0) {
-//             return false;
-//         }
-        
-//         std::string message = data + "\n"; // Add newline for easier parsing on NRF side
-//         ssize_t bytes_written = write(serial_fd, message.c_str(), message.length());
-        
-//         if (bytes_written < 0) {
-//             std::cerr << "Error writing to serial port: " << strerror(errno) << std::endl;
-//             return false;
-//         }
-        
-//         // Force write to complete
-//         tcdrain(serial_fd);
-//         return true;
-//     }
-
-//     std::string readData()
-//     {
-//         std::lock_guard<std::mutex> lock(serial_mutex);
-//         if (serial_fd < 0) {
-//             return "";
-//         }
-        
-//         char buffer[256];
-//         ssize_t bytes_read = read(serial_fd, buffer, sizeof(buffer) - 1);
-        
-//         if (bytes_read > 0) {
-//             buffer[bytes_read] = '\0';
-//             std::string data(buffer);
-            
-//             // Remove newlines and carriage returns
-//             data.erase(std::remove(data.begin(), data.end(), '\n'), data.end());
-//             data.erase(std::remove(data.begin(), data.end(), '\r'), data.end());
-            
-//             return data;
-//         }
-        
-//         return "";
-//     }
-    
-//     bool isConnected() const
-//     {
-//         return serial_fd >= 0;
-//     }
-// };
 
 // Destroy TensorRT objects
 struct TRTDestroy
@@ -878,6 +937,7 @@ int main(int argc, char** argv)
             std::cerr << "Failed to initialize serial communication. Continuing without serial..." << std::endl;
             serial.reset(); // Disable serial communication
         }
+        serial.startCommandInterface();
     }
 
     // Setup MQTT connection
@@ -1038,6 +1098,7 @@ int main(int argc, char** argv)
         // Cleanup
         cap.release();
         cv::destroyAllWindows();
+        serial.stop();
         
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
