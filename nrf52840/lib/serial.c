@@ -12,6 +12,7 @@
 #include <zephyr/logging/log.h>
 #include <stdlib.h>
 #include "bt.h"
+#include "ultrasonic.h"
 
 #include <zephyr/drivers/gpio.h> // For GPIO driver
 
@@ -97,6 +98,16 @@ void process_data_thread(void *p1, void *p2, void *p3)
                 }
 
                 printk("Processing line: \"%s\"\n", line_buffer);
+
+                if (strcmp(line_buffer, "ultra on") == 0) {
+                    ultrasonic_enable();
+                    line_buffer_pos = 0; 
+                    continue;
+                } else if (strcmp(line_buffer, "ultra off") == 0) {
+                    ultrasonic_disable();
+                    line_buffer_pos = 0; 
+                    continue;
+                }
 
                 char* token;
 

@@ -27,6 +27,30 @@ K_MSGQ_DEFINE(fill_level_msgq, sizeof(float), 10, 4);
 void sample_fill_level_thread(void);
 K_THREAD_DEFINE(sample_fill_level_tid, STACKSIZE, sample_fill_level_thread, NULL, NULL, NULL, SAMPLE_FILL_LEVEL_PRIORITY, 0, 0);
 
+static bool ultrasonic_enabled = true; 
+
+void ultrasonic_enable(void) {
+    if (ultrasonic_enabled) {
+        printk("Ultrasonic already enabled\n");
+        return;
+    }
+    
+    k_thread_resume(sample_fill_level_tid);
+    ultrasonic_enabled = true;
+    printk("Ultrasonic thread resumed\n");
+}
+
+void ultrasonic_disable(void) {
+    if (!ultrasonic_enabled) {
+        printk("Ultrasonic already disabled\n");
+        return;
+    }
+    
+    k_thread_suspend(sample_fill_level_tid);
+    ultrasonic_enabled = false;
+    printk("Ultrasonic thread suspended\n");
+}
+
 void ultrasonic_setup(void) {
     if (!device_is_ready(gpio0)) {
         printk("GPIO0 not ready\n");
